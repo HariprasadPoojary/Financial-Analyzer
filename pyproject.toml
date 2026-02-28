@@ -1,0 +1,11 @@
+[project]
+name = "ai-financial-report"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "fastapi>=0.134.0",
+    "pandas>=3.0.1",
+    "plotly>=6.5.2",
+]
