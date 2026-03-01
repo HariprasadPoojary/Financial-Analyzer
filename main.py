@@ -6,7 +6,7 @@ from app.categorizer import categorize_dataframe
 from app.parser import parse_csv
 
 # ← Point this to your actual CSV file
-CSV_PATH = "uploads/my_statement.csv"
+CSV_PATH = "app\\uploads\\AxisBank_Dec_Month_Statement.csv"
 
 result = parse_csv(CSV_PATH)
 

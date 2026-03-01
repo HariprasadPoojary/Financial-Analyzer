@@ -10,6 +10,7 @@ Supported formats auto-detected:
     - OFX-style: Date, Name, Amount, Transaction Type
 """
 
+import pdb
 import re
 from dataclasses import dataclass
 from pathlib import Path
@@ -31,65 +32,15 @@ class ParseResult:
 
 
 # ── Column name aliases (case-insensitive matching) ────────────────────────────
-
-DATE_ALIASES = [
-    "date",
-    "transaction date",
-    "trans date",
-    "post date",
-    "posted date",
-    "value date",
-    "booking date",
-]
-
-DESCRIPTION_ALIASES = [
-    "description",
-    "desc",
-    "narrative",
-    "details",
-    "merchant",
-    "merchant name",
-    "name",
-    "payee",
-    "reference",
-    "memo",
-    "particulars",
-    "transaction description",
-    "transaction details",
-    "beneficiary",
-]
-
-AMOUNT_ALIASES = [
-    "amount",
-    "transaction amount",
-    "net amount",
-    "value",
-]
-
-DEBIT_ALIASES = [
-    "debit",
-    "debit amount",
-    "withdrawal",
-    "withdrawals",
-    "dr",
-    "payments",
-    "payment",
-    "charges",
-    "charge",
-]
-
-CREDIT_ALIASES = [
-    "credit",
-    "credit amount",
-    "deposit",
-    "deposits",
-    "cr",
-    "receipts",
-]
+DATE_ALIASES = ["Txn Date", "Tran Date"]
+DESCRIPTION_ALIASES = ["PARTICULARS", "Description"]
+DEBIT_ALIASES = ["Debit", "DR"]
+CREDIT_ALIASES = ["Credit", "CR"]
+BALANCE_ALIASES = ["Balance", "BAL"]
 
 
 def _normalize_col_name(name: str) -> str:
-    return name.strip().lower()
+    return name.strip()
 
 
 def _find_column(df_cols: list[str], aliases: list[str]) -> str | None:
@@ -108,7 +59,7 @@ def _detect_header_row(raw: pd.DataFrame) -> int:
     recognizable column names.
     """
     all_aliases = (
-        DATE_ALIASES + DESCRIPTION_ALIASES + AMOUNT_ALIASES + DEBIT_ALIASES + CREDIT_ALIASES
+        DATE_ALIASES + DESCRIPTION_ALIASES + DEBIT_ALIASES + CREDIT_ALIASES + BALANCE_ALIASES
     )
 
     best_row, best_score = 0, 0
@@ -130,7 +81,7 @@ def _parse_amount(value) -> float | None:
         return None
     # Handle accounting negatives: (500.00) → -500.00
     negative = s.startswith("(") and s.endswith(")")
-    s = re.sub(r"[()$£€,\s]", "", s)
+    s = re.sub(r"[()$₹,\s]", "", s)
     try:
         val = float(s)
         return -abs(val) if negative else val
@@ -168,7 +119,9 @@ def _load_raw_csv(filepath: str) -> pd.DataFrame:
     """Load CSV, trying common encodings."""
     for encoding in ("utf-8", "latin-1", "cp1252"):
         try:
-            return pd.read_csv(filepath, encoding=encoding, header=None, dtype=str)
+            return pd.read_csv(
+                filepath, encoding=encoding, header=None, on_bad_lines="warn", dtype=str
+            )
         except UnicodeDecodeError:
             continue
     raise ValueError(f"Cannot decode file: {filepath}")
@@ -178,9 +131,9 @@ def _build_normalized_df(
     df: pd.DataFrame,
     date_col: str,
     desc_col: str,
-    amount_col: str | None,
     debit_col: str | None,
     credit_col: str | None,
+    balance_col: str | None,
     warnings: list[str],
 ) -> pd.DataFrame:
     """Build the normalized dataframe from detected columns."""
@@ -195,31 +148,33 @@ def _build_normalized_df(
 
     # Description
     result["description"] = df[desc_col].fillna("").str.strip()
+    # Amount — determine which column(s) contain transaction amounts
+    try:
+        if balance_col:
+            result["balance"] = df[balance_col].apply(_parse_amount)
 
-    # Amount — two strategies
-    if amount_col:
-        result["amount"] = df[amount_col].apply(_parse_amount)
-        # Positive = credit, negative = debit
-        result["type"] = result["amount"].apply(
-            lambda x: "credit" if (x is not None and x > 0) else "debit"
-        )
-    elif debit_col and credit_col:
-        debits = df[debit_col].apply(_parse_amount).fillna(0)
-        credits = df[credit_col].apply(_parse_amount).fillna(0)
-        # Debits stored as negative amounts
-        result["amount"] = credits - debits
-        result["type"] = result["amount"].apply(lambda x: "credit" if x >= 0 else "debit")
-    elif debit_col:
-        result["amount"] = (
-            df[debit_col].apply(_parse_amount).apply(lambda x: -abs(x) if x is not None else None)
-        )
-        result["type"] = "debit"
-    elif credit_col:
-        result["amount"] = df[credit_col].apply(_parse_amount)
-        result["type"] = "credit"
-    else:
-        raise ValueError("No amount, debit, or credit column found in CSV.")
+        if debit_col and credit_col:
+            # Both columns present: debit is negative, credit is positive
+            debits = df[debit_col].apply(_parse_amount).fillna(0)
+            credits = df[credit_col].apply(_parse_amount).fillna(0)
+            result["amount"] = credits - debits
+            result["type"] = result["amount"].apply(
+                lambda x: "credit" if x > 0 else ("debit" if x < 0 else "neutral")
+            )
+        elif debit_col:
+            result["amount"] = (
+                df[debit_col]
+                .apply(_parse_amount)
+                .apply(lambda x: -abs(x) if x is not None else None)
+            )
+            result["type"] = "debit"
+        elif credit_col:
+            result["amount"] = df[credit_col].apply(_parse_amount)
+            result["type"] = "credit"
+    except Exception as e:
+        raise ValueError(f"Error processing amount columns: {e}")
 
+    pdb.set_trace()
     # Drop rows with null dates or null amounts
     before = len(result)
     result = result.dropna(subset=["date", "amount"])
@@ -264,19 +219,19 @@ def parse_csv(filepath: str) -> ParseResult:
     # Detect columns
     date_col = _find_column(list(df.columns), DATE_ALIASES)
     desc_col = _find_column(list(df.columns), DESCRIPTION_ALIASES)
-    amount_col = _find_column(list(df.columns), AMOUNT_ALIASES)
     debit_col = _find_column(list(df.columns), DEBIT_ALIASES)
     credit_col = _find_column(list(df.columns), CREDIT_ALIASES)
+    balance_col = _find_column(list(df.columns), BALANCE_ALIASES)
 
     if not date_col:
         raise ValueError(f"Could not find a date column. Found columns: {list(df.columns)}")
     if not desc_col:
         raise ValueError(f"Could not find a description column. Found columns: {list(df.columns)}")
-    if not (amount_col or debit_col or credit_col):
+    if not (balance_col or debit_col or credit_col):
         raise ValueError(f"Could not find any amount column. Found columns: {list(df.columns)}")
 
     normalized = _build_normalized_df(
-        df, date_col, desc_col, amount_col, debit_col, credit_col, warnings
+        df, date_col, desc_col, debit_col, credit_col, balance_col, warnings
     )
 
     date_range = (
