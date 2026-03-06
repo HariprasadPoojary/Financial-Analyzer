@@ -37,9 +37,10 @@ def format_indian_currency(amount: float) -> str:
 
 
 # ← Point this to your actual CSV file
-CSV_PATH = "app\\uploads\\SBI_statement_last_3_months.csv"
+AXIS_CSV_PATH = "app\\uploads\\Axis_statement_last_3_months.csv"
+SBI_CSV_PATH = "app\\uploads\\SBI_statement_last_3_months.csv"
 
-result = parse_csv(CSV_PATH)
+result = parse_csv(AXIS_CSV_PATH)
 
 print(f"[OK] Parsed {result.row_count} transactions")
 print(f"[DATE] Date range: {result.date_range[0]} -> {result.date_range[1]}")
