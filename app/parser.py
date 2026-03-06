@@ -10,16 +10,20 @@ Supported formats auto-detected:
     - OFX-style: Date, Name, Amount, Transaction Type
 """
 
-import pdb
+import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
 
-# ── Output schema ─────────────────────────────────────────────────────────────
-
-NORMALIZED_COLUMNS = ["date", "description", "amount", "type"]
+from const import (
+    BALANCE_ALIASES,
+    CREDIT_ALIASES,
+    DATE_ALIASES,
+    DEBIT_ALIASES,
+    DESCRIPTION_ALIASES,
+)
 
 
 @dataclass
@@ -29,14 +33,6 @@ class ParseResult:
     row_count: int
     date_range: tuple  # (min_date, max_date)
     warnings: list[str]  # non-fatal issues found during parsing
-
-
-# ── Column name aliases (case-insensitive matching) ────────────────────────────
-DATE_ALIASES = ["Txn Date", "Tran Date"]
-DESCRIPTION_ALIASES = ["PARTICULARS", "Description"]
-DEBIT_ALIASES = ["Debit", "DR"]
-CREDIT_ALIASES = ["Credit", "CR"]
-BALANCE_ALIASES = ["Balance", "BAL"]
 
 
 def _normalize_col_name(name: str) -> str:
@@ -116,14 +112,16 @@ def _parse_date(series: pd.Series) -> pd.Series:
 
 
 def _load_raw_csv(filepath: str) -> pd.DataFrame:
-    """Load CSV, trying common encodings."""
+    """Load CSV with encoding detection, comma-delimited."""
     for encoding in ("utf-8", "latin-1", "cp1252"):
         try:
-            return pd.read_csv(
-                filepath, encoding=encoding, header=None, on_bad_lines="warn", dtype=str
-            )
-        except UnicodeDecodeError:
-            continue
+            df = pd.read_csv(filepath, encoding=encoding, delimiter=",", on_bad_lines="skip")
+            if len(df.columns) > 2:
+                df.columns = [str(c).strip() for c in df.columns]
+                return df
+        except Exception:
+            pass
+
     raise ValueError(f"Cannot decode file: {filepath}")
 
 
@@ -146,21 +144,67 @@ def _build_normalized_df(
     if bad_dates:
         warnings.append(f"{bad_dates} rows had unparseable dates and were dropped.")
 
-    # Description
-    result["description"] = df[desc_col].fillna("").str.strip()
+    # Description — normalize and remove embedded newlines/extra whitespace
+    result["description"] = (
+        df[desc_col]
+        .fillna("")
+        .astype(str)
+        .str.replace(r"[\r\n]+", " ", regex=True)
+        .str.replace(r"\s+", " ", regex=True)
+        .str.strip()
+    )
     # Amount — determine which column(s) contain transaction amounts
     try:
         if balance_col:
             result["balance"] = df[balance_col].apply(_parse_amount)
 
         if debit_col and credit_col:
-            # Both columns present: debit is negative, credit is positive
+            # Both columns present. Different banks use different semantics:
+            # - "standard": Credit column contains incoming funds, Debit contains outgoing.
+            # - "reversed": Debit column contains incoming funds (Axis style DR=credit).
             debits = df[debit_col].apply(_parse_amount).fillna(0)
             credits = df[credit_col].apply(_parse_amount).fillna(0)
-            result["amount"] = credits - debits
-            result["type"] = result["amount"].apply(
-                lambda x: "credit" if x > 0 else ("debit" if x < 0 else "neutral")
-            )
+
+            # Default to standard orientation (credits positive). If a balance
+            # column exists, use balance deltas to detect orientation automatically.
+            orientation_standard = True
+            if balance_col:
+                try:
+                    balance = df[balance_col].apply(_parse_amount)
+                    # Compute per-row balance change: current - previous
+                    bal_diff = balance.diff()
+                    # Consider rows where exactly one of debit/credit is non-zero
+                    mask = ((debits > 0) ^ (credits > 0)) & bal_diff.notna()
+                    # If no informative rows, keep default
+                    if mask.sum() >= 3:
+                        # Count how many rows match standard (bal_diff ≈ credits - debits)
+                        std_matches = (
+                            (bal_diff[mask] - (credits[mask] - debits[mask])).abs() < 0.01
+                        ).sum()
+                        rev_matches = (
+                            (bal_diff[mask] - (debits[mask] - credits[mask])).abs() < 0.01
+                        ).sum()
+                        orientation_standard = std_matches >= rev_matches
+                except Exception:
+                    # If detection fails, fall back to default
+                    orientation_standard = True
+
+            if orientation_standard:
+                # Standard: amount = credits - debits (incoming positive)
+                result["amount"] = credits - debits
+            else:
+                # Reversed (Axis-like): amount = debits - credits
+                result["amount"] = debits - credits
+
+            # Determine type purely from computed amount
+            def sign_type(x):
+                if x > 0:
+                    return "credit"
+                if x < 0:
+                    return "debit"
+                return "neutral"
+
+            result["type"] = [sign_type(x) for x in result["amount"]]
         elif debit_col:
             result["amount"] = (
                 df[debit_col]
@@ -174,7 +218,6 @@ def _build_normalized_df(
     except Exception as e:
         raise ValueError(f"Error processing amount columns: {e}")
 
-    pdb.set_trace()
     # Drop rows with null dates or null amounts
     before = len(result)
     result = result.dropna(subset=["date", "amount"])
@@ -197,12 +240,13 @@ def parse_csv(filepath: str) -> ParseResult:
     warnings = []
     source_file = Path(filepath).name
 
+    # Load raw CSV
     raw = _load_raw_csv(filepath)
 
     if raw.empty:
         raise ValueError(f"File is empty: {filepath}")
 
-    # Find the actual header row
+    # Find the actual header row (in case there are metadata rows)
     header_row = _detect_header_row(raw)
     if header_row > 0:
         warnings.append(f"Skipped {header_row} metadata row(s) before header.")
@@ -212,7 +256,9 @@ def parse_csv(filepath: str) -> ParseResult:
         filepath,
         skiprows=header_row,
         dtype=str,
-        encoding="latin-1",
+        encoding="utf-8",
+        delimiter=",",
+        on_bad_lines="skip",
     )
     df.columns = [str(c).strip() for c in df.columns]
 
