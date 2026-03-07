@@ -507,6 +507,10 @@ filterTable();
 
 
 def generate_report(result: AnalysisResult, output_path: str) -> str:
+    """
+    Render the HTML report and write to output_path.
+    Returns the output path.
+    """
     env = Environment(autoescape=select_autoescape(["html"]))
     template = env.from_string(TEMPLATE)
 
