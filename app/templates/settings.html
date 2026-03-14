@@ -1,0 +1,495 @@
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Category Editor</title>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap"
+			rel="stylesheet"
+		/>
+		<style>
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			:root {
+				--bg: #080c12;
+				--surface: #0e1520;
+				--surface2: #162030;
+				--surface3: #1c2a3a;
+				--border: rgba(99, 202, 183, 0.12);
+				--accent: #63cab7;
+				--text: #e8f0ee;
+				--muted: #5a7a72;
+				--danger: #e05555;
+			}
+			body {
+				background: var(--bg);
+				color: var(--text);
+				font-family: "DM Mono", monospace;
+				padding: 32px 24px;
+				min-height: 100vh;
+			}
+			.header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 24px;
+				flex-wrap: wrap;
+				gap: 12px;
+			}
+			h1 {
+				font-family: "Syne", sans-serif;
+				font-size: 1.5rem;
+				font-weight: 800;
+				letter-spacing: -0.02em;
+			}
+			.subtitle {
+				color: var(--muted);
+				font-size: 0.78rem;
+				margin-top: 3px;
+			}
+			.back {
+				color: var(--muted);
+				text-decoration: none;
+				font-size: 0.8rem;
+				padding: 7px 14px;
+				border: 1px solid var(--border);
+				border-radius: 7px;
+				transition: all 0.2s;
+			}
+			.back:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+			.toolbar {
+				display: flex;
+				gap: 10px;
+				margin-bottom: 20px;
+				flex-wrap: wrap;
+				align-items: center;
+			}
+			.btn {
+				padding: 9px 18px;
+				border-radius: 8px;
+				font-family: "DM Mono", monospace;
+				font-size: 0.82rem;
+				cursor: pointer;
+				border: 1px solid var(--border);
+				background: var(--surface2);
+				color: var(--text);
+				transition: all 0.2s;
+			}
+			.btn:hover {
+				border-color: var(--accent);
+				color: var(--accent);
+			}
+			.btn-primary {
+				background: linear-gradient(135deg, #0d5c4e, #1a7a67);
+				border-color: rgba(99, 202, 183, 0.3);
+				color: #e8f0ee;
+				font-family: "Syne", sans-serif;
+				font-weight: 700;
+			}
+			.btn-primary:hover {
+				box-shadow: 0 4px 20px rgba(99, 202, 183, 0.2);
+				color: #e8f0ee;
+			}
+			.btn-danger {
+				border-color: rgba(224, 85, 85, 0.3);
+				color: var(--danger);
+			}
+			.btn-danger:hover {
+				background: rgba(224, 85, 85, 0.1);
+			}
+			#status {
+				font-size: 0.8rem;
+				padding: 6px 12px;
+				border-radius: 6px;
+				display: none;
+			}
+			#status.ok {
+				background: rgba(16, 185, 129, 0.1);
+				color: #6ee7b7;
+				border: 1px solid rgba(16, 185, 129, 0.2);
+				display: block;
+			}
+			#status.err {
+				background: rgba(224, 85, 85, 0.1);
+				color: #fca5a5;
+				border: 1px solid rgba(224, 85, 85, 0.2);
+				display: block;
+			}
+			.categories {
+				display: flex;
+				flex-direction: column;
+				gap: 10px;
+			}
+			.cat-card {
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				overflow: hidden;
+				transition: border-color 0.2s;
+			}
+			.cat-card:hover {
+				border-color: rgba(99, 202, 183, 0.22);
+			}
+			.cat-header {
+				display: flex;
+				align-items: center;
+				gap: 10px;
+				padding: 12px 16px;
+				background: var(--surface2);
+				cursor: pointer;
+				user-select: none;
+			}
+			.cat-toggle {
+				color: var(--muted);
+				font-size: 0.7rem;
+				transition: transform 0.2s;
+				flex-shrink: 0;
+			}
+			.cat-toggle.open {
+				transform: rotate(90deg);
+			}
+			.cat-name-wrap {
+				flex: 1;
+				display: flex;
+				align-items: center;
+				gap: 10px;
+			}
+			.cat-name-input {
+				background: transparent;
+				border: none;
+				border-bottom: 1px solid transparent;
+				color: var(--text);
+				font-family: "Syne", sans-serif;
+				font-weight: 700;
+				font-size: 0.9rem;
+				outline: none;
+				padding: 2px 0;
+				flex: 1;
+				transition: border-color 0.2s;
+			}
+			.cat-name-input:focus {
+				border-color: var(--accent);
+			}
+			.type-select {
+				background: var(--surface3);
+				border: 1px solid var(--border);
+				color: var(--muted);
+				padding: 3px 8px;
+				border-radius: 4px;
+				font-size: 0.7rem;
+				font-family: "DM Mono", monospace;
+				outline: none;
+			}
+			.pat-count {
+				font-size: 0.7rem;
+				padding: 2px 8px;
+				border-radius: 4px;
+				background: var(--surface3);
+				color: var(--muted);
+			}
+			.cat-del {
+				color: var(--muted);
+				background: none;
+				border: none;
+				cursor: pointer;
+				font-size: 0.9rem;
+				padding: 4px;
+				border-radius: 4px;
+				transition: color 0.2s;
+				flex-shrink: 0;
+			}
+			.cat-del:hover {
+				color: var(--danger);
+			}
+			.cat-body {
+				padding: 14px 16px;
+				display: none;
+			}
+			.cat-body.open {
+				display: block;
+			}
+			.patterns {
+				display: flex;
+				flex-direction: column;
+				gap: 6px;
+				margin-bottom: 10px;
+			}
+			.pattern-row {
+				display: flex;
+				align-items: center;
+				gap: 8px;
+			}
+			.pattern-input {
+				flex: 1;
+				background: var(--surface3);
+				border: 1px solid var(--border);
+				color: var(--text);
+				padding: 7px 10px;
+				border-radius: 6px;
+				font-family: "DM Mono", monospace;
+				font-size: 0.78rem;
+				outline: none;
+				transition: border-color 0.2s;
+			}
+			.pattern-input:focus {
+				border-color: var(--accent);
+			}
+			.del-pat {
+				background: none;
+				border: none;
+				cursor: pointer;
+				color: var(--muted);
+				font-size: 0.85rem;
+				padding: 4px;
+				border-radius: 3px;
+				transition: color 0.2s;
+				flex-shrink: 0;
+			}
+			.del-pat:hover {
+				color: var(--danger);
+			}
+			.add-pat {
+				font-size: 0.75rem;
+				color: var(--accent);
+				background: none;
+				border: 1px dashed rgba(99, 202, 183, 0.3);
+				border-radius: 6px;
+				padding: 5px 12px;
+				cursor: pointer;
+				transition: all 0.2s;
+				font-family: "DM Mono", monospace;
+			}
+			.add-pat:hover {
+				background: rgba(99, 202, 183, 0.06);
+			}
+			.empty-pat {
+				color: var(--muted);
+				font-size: 0.78rem;
+				font-style: italic;
+				padding: 4px 0;
+			}
+			.add-cat-row {
+				background: var(--surface);
+				border: 1px dashed var(--border);
+				border-radius: 12px;
+				padding: 14px 16px;
+				display: flex;
+				gap: 10px;
+				align-items: center;
+				margin-top: 4px;
+			}
+			.new-cat-input {
+				flex: 1;
+				background: var(--surface2);
+				border: 1px solid var(--border);
+				color: var(--text);
+				padding: 9px 12px;
+				border-radius: 7px;
+				font-family: "Syne", sans-serif;
+				font-weight: 600;
+				font-size: 0.88rem;
+				outline: none;
+				transition: border-color 0.2s;
+			}
+			.new-cat-input:focus {
+				border-color: var(--accent);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<div>
+				<h1>⚙ Category Editor</h1>
+				<div class="subtitle">
+					Customize how transactions are categorized
+				</div>
+			</div>
+			<a href="/" class="back">← Back to upload</a>
+		</div>
+		<div class="toolbar">
+			<button class="btn btn-primary" onclick="saveRules()">
+				💾 Save Changes
+			</button>
+			<button class="btn" onclick="loadRules()">↺ Reload</button>
+			<button class="btn btn-danger" onclick="resetRules()">
+				Reset to defaults
+			</button>
+			<span id="status"></span>
+		</div>
+		<div class="categories" id="cat-list">
+			<div style="color: var(--muted); font-size: 0.82rem">
+				Loading...
+			</div>
+		</div>
+		<div class="add-cat-row">
+			<input
+				class="new-cat-input"
+				id="new-cat-name"
+				placeholder="New category name..."
+				onkeydown="if (event.key === 'Enter') addCategory();"
+			/>
+			<button class="btn" onclick="addCategory()">+ Add Category</button>
+		</div>
+		<script>
+			let rules = [];
+
+			async function loadRules() {
+				const res = await fetch("/api/rules");
+				rules = await res.json();
+				render();
+			}
+
+			function render() {
+				const list = document.getElementById("cat-list");
+				if (!rules.length) {
+					list.innerHTML =
+						'<div style="color:var(--muted);font-size:.82rem">No rules. Add a category below.</div>';
+					return;
+				}
+				list.innerHTML = rules
+					.map(
+						(r, ri) => `
+      <div class="cat-card">
+        <div class="cat-header" onclick="toggleCard(${ri})">
+          <span class="cat-toggle" id="tog-${ri}">▶</span>
+          <div class="cat-name-wrap">
+            <input class="cat-name-input" value="${esc(r.category)}" onclick="event.stopPropagation()"
+                   oninput="rules[${ri}].category=this.value" placeholder="Category name"/>
+            <select class="type-select" onchange="rules[${ri}].txn_type=this.value" onclick="event.stopPropagation()">
+              <option value="both" ${r.txn_type === "both" ? "selected" : ""}>both</option>
+              <option value="credit" ${r.txn_type === "credit" ? "selected" : ""}>credit only</option>
+              <option value="debit" ${r.txn_type === "debit" ? "selected" : ""}>debit only</option>
+            </select>
+            <span class="pat-count">${r.patterns.length} pattern${r.patterns.length !== 1 ? "s" : ""}</span>
+          </div>
+          <button class="cat-del" onclick="event.stopPropagation();delCat(${ri})" title="Delete">✕</button>
+        </div>
+        <div class="cat-body" id="body-${ri}">
+          <div class="patterns" id="pats-${ri}">
+            ${
+				r.patterns.length
+					? r.patterns
+							.map(
+								(p, pi) => `
+                <div class="pattern-row">
+                  <input class="pattern-input" value="${esc(p)}" placeholder="regex pattern..."
+                         oninput="rules[${ri}].patterns[${pi}]=this.value"/>
+                  <button class="del-pat" onclick="delPat(${ri},${pi})">✕</button>
+                </div>`,
+							)
+							.join("")
+					: '<div class="empty-pat">No patterns yet.</div>'
+			}
+          </div>
+          <button class="add-pat" onclick="addPat(${ri})">+ Add pattern</button>
+        </div>
+      </div>`,
+					)
+					.join("");
+			}
+
+			function toggleCard(ri) {
+				document.getElementById(`body-${ri}`).classList.toggle("open");
+				document.getElementById(`tog-${ri}`).classList.toggle("open");
+			}
+			function openCard(ri) {
+				document.getElementById(`body-${ri}`)?.classList.add("open");
+				document.getElementById(`tog-${ri}`)?.classList.add("open");
+			}
+			function addPat(ri) {
+				rules[ri].patterns.push("");
+				render();
+				openCard(ri);
+				const inputs = document
+					.getElementById(`pats-${ri}`)
+					?.querySelectorAll(".pattern-input");
+				if (inputs?.length) inputs[inputs.length - 1].focus();
+			}
+			function delPat(ri, pi) {
+				rules[ri].patterns.splice(pi, 1);
+				render();
+				openCard(ri);
+			}
+			function delCat(ri) {
+				if (!confirm(`Delete "${rules[ri].category}"?`)) return;
+				rules.splice(ri, 1);
+				render();
+			}
+			function addCategory() {
+				const input = document.getElementById("new-cat-name");
+				const name = input.value.trim();
+				if (!name) {
+					input.focus();
+					return;
+				}
+				rules.push({ category: name, patterns: [], txn_type: "both" });
+				input.value = "";
+				render();
+				setTimeout(() => openCard(rules.length - 1), 50);
+			}
+			async function saveRules() {
+				const cleaned = rules.map((r) => ({
+					...r,
+					patterns: r.patterns.filter((p) => p.trim()),
+				}));
+				const s = document.getElementById("status");
+				try {
+					const res = await fetch("/api/rules", {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify(cleaned),
+					});
+					if (!res.ok) {
+						const e = await res.json();
+						throw new Error(e.error);
+					}
+					const data = await res.json();
+					s.className = "ok";
+					s.textContent = `✓ Saved ${data.count} categories`;
+					rules = cleaned;
+					render();
+					setTimeout(() => {
+						s.className = "";
+						s.style.display = "none";
+					}, 3000);
+				} catch (err) {
+					s.className = "err";
+					s.textContent = "⚠ " + err.message;
+				}
+			}
+			async function resetRules() {
+				if (
+					!confirm(
+						"Reset to defaults? This discards all custom rules.",
+					)
+				)
+					return;
+				await fetch("/api/rules/reset", { method: "POST" });
+				await loadRules();
+				const s = document.getElementById("status");
+				s.className = "ok";
+				s.textContent = "↺ Reset to defaults";
+				setTimeout(() => {
+					s.className = "";
+					s.style.display = "none";
+				}, 3000);
+			}
+			function esc(s) {
+				return String(s)
+					.replace(/&/g, "&amp;")
+					.replace(/</g, "&lt;")
+					.replace(/>/g, "&gt;")
+					.replace(/"/g, "&quot;");
+			}
+			loadRules();
+		</script>
+	</body>
+</html>

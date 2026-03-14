@@ -1,0 +1,142 @@
+[
+  {
+    "category": "Income",
+    "patterns": [
+      "\\bsalary\\b",
+      "\\bSALARY\\b",
+      "\\bACH-CR\\b",
+      "\\bIMPS/P2A\\b",
+      "\\bMBB-TD/\\b",
+      "\\bNEFT\\b",
+      "\\bUPI/CR\\b",
+      "\\bSB:\\b"
+    ],
+    "txn_type": "credit"
+  },
+  {
+    "category": "Housing",
+    "patterns": [
+      "\\brent\\b",
+      "\\bBABITHA  MANJUNATH   /\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "Groceries",
+    "patterns": [
+      "\\bZepto\\b",
+      "\\btrader joe",
+      "\\bkroger\\b",
+      "\\bsafeway\\b",
+      "\\baldi\\b",
+      "\\bwegmans\\b",
+      "\\bpublix\\b",
+      "\\bcostco\\b",
+      "\\bwaitrose\\b",
+      "\\btesco\\b",
+      "\\bsainsbury\\b",
+      "\\basda\\b",
+      "\\blidl\\b",
+      "\\bmorrisons\\b",
+      "\\bsupermarket\\b",
+      "\\bgrocery\\b",
+      "\\bfood store\\b",
+      "\\bmarket\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "Dining",
+    "patterns": [
+      "\\brestaurant\\b",
+      "\\bcafe\\b",
+      "\\bZomato\\b",
+      "\\bDominos\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "Transport",
+    "patterns": [
+      "\\buber\\b",
+      "\\bRedbus\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "Utilities",
+    "patterns": [
+      "\\belectric\\b",
+      "\\bgas bill\\b",
+      "\\bwater bill\\b",
+      "\\binternet\\b",
+      "\\bbroadband\\b",
+      "\\bphone\\b",
+      "\\bmobile\\b",
+      "\\bbt group\\b",
+      "\\bvirgin media\\b",
+      "\\bpge\\b",
+      "\\bcon edison\\b",
+      "\\bcouncil tax\\b",
+      "\\brates\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "Subscriptions & Entertainment",
+    "patterns": [
+      "\\bnetflix\\b",
+      "\\bDISTRICT\\b",
+      "\\bbookmyshow\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "Shopping",
+    "patterns": [
+      "\\bamazon\\b",
+      "\\bCreditCard Payment\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "Cash & ATM",
+    "patterns": [
+      "\\bATMCard\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "UPI & Transfers",
+    "patterns": [
+      "\\bUPI/\\b",
+      "\\bUPI/CR\\b",
+      "\\bRAZORPAY/\\b",
+      "\\bNEFT/\\b",
+      "\\bUPILITE\\b"
+    ],
+    "txn_type": "both"
+  },
+  {
+    "category": "Investments",
+    "patterns": [
+      "\\bMutual Funds\\b",
+      "\\bGroww\\b",
+      "\\bPPF\\b",
+      "\\bRD/\\b",
+      "\\bACH-DR-Groww\\b",
+      "\\bLIC OF INDIA\\b",
+      "\\bECS/UTIBDE34161840202601\\b",
+      "\\bWEALTHYIN CUSTOMER\\b",
+      "\\bethereum\\b"
+    ],
+    "txn_type": "debit"
+  },
+  {
+    "category": "EMI",
+    "patterns": [
+      "_EMI_"
+    ],
+    "txn_type": "debit"
+  }
+]

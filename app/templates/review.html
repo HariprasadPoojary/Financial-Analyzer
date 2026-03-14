@@ -1,0 +1,310 @@
+<html lang="en">
+	<head>
+		<meta charset="UTF-8" />
+		<meta name="viewport" content="width=device-width,initial-scale=1" />
+		<title>Review Uncategorized</title>
+		<link
+			href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=DM+Mono:wght@400;500&display=swap"
+			rel="stylesheet"
+		/>
+		<style>
+			*,
+			*::before,
+			*::after {
+				box-sizing: border-box;
+				margin: 0;
+				padding: 0;
+			}
+			:root {
+				--bg: #080c12;
+				--surface: #0e1520;
+				--surface2: #162030;
+				--border: rgba(99, 202, 183, 0.12);
+				--accent: #63cab7;
+				--text: #e8f0ee;
+				--muted: #5a7a72;
+				--green: #10b981;
+				--red: #ef4444;
+			}
+			body {
+				background: var(--bg);
+				color: var(--text);
+				font-family: "DM Mono", monospace;
+				padding: 32px 24px;
+				min-height: 100vh;
+			}
+			.header {
+				display: flex;
+				align-items: center;
+				justify-content: space-between;
+				margin-bottom: 24px;
+				flex-wrap: wrap;
+				gap: 12px;
+			}
+			h1 {
+				font-family: "Syne", sans-serif;
+				font-size: 1.5rem;
+				font-weight: 800;
+				letter-spacing: -0.02em;
+			}
+			.subtitle {
+				color: var(--muted);
+				font-size: 0.78rem;
+				margin-top: 3px;
+			}
+			.back {
+				color: var(--muted);
+				text-decoration: none;
+				font-size: 0.8rem;
+				padding: 7px 14px;
+				border: 1px solid var(--border);
+				border-radius: 7px;
+				transition: all 0.2s;
+			}
+			.back:hover {
+				color: var(--accent);
+				border-color: var(--accent);
+			}
+			.info-bar {
+				background: rgba(99, 202, 183, 0.07);
+				border: 1px solid rgba(99, 202, 183, 0.2);
+				border-radius: 10px;
+				padding: 12px 18px;
+				margin-bottom: 20px;
+				font-size: 0.8rem;
+				color: var(--muted);
+			}
+			.info-bar strong {
+				color: var(--accent);
+			}
+			.table-wrap {
+				overflow-x: auto;
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 12px;
+				margin-bottom: 20px;
+			}
+			table {
+				width: 100%;
+				border-collapse: collapse;
+				font-size: 0.82rem;
+			}
+			th {
+				color: var(--muted);
+				font-weight: 500;
+				padding: 10px 14px;
+				border-bottom: 1px solid var(--border);
+				text-align: left;
+				font-size: 0.72rem;
+				text-transform: uppercase;
+				letter-spacing: 0.06em;
+				white-space: nowrap;
+			}
+			td {
+				padding: 10px 14px;
+				border-bottom: 1px solid var(--border);
+			}
+			tr:last-child td {
+				border-bottom: none;
+			}
+			tr:hover td {
+				background: var(--surface2);
+			}
+			.desc {
+				max-width: 260px;
+				overflow: hidden;
+				text-overflow: ellipsis;
+				white-space: nowrap;
+				color: #94a3b8;
+			}
+			.mono {
+				font-family: "DM Mono", monospace;
+			}
+			.muted {
+				color: var(--muted);
+			}
+			.pos {
+				color: var(--green);
+				font-weight: 600;
+			}
+			.neg {
+				color: var(--red);
+				font-weight: 600;
+			}
+			.cur-cat {
+				display: inline-block;
+				padding: 2px 8px;
+				border-radius: 4px;
+				background: rgba(239, 68, 68, 0.12);
+				color: #fca5a5;
+				font-size: 0.75rem;
+			}
+			.cat-select {
+				background: var(--surface2);
+				border: 1px solid var(--border);
+				color: var(--text);
+				padding: 6px 10px;
+				border-radius: 6px;
+				font-family: "DM Mono", monospace;
+				font-size: 0.78rem;
+				outline: none;
+				transition: border-color 0.2s;
+				width: 100%;
+				min-width: 160px;
+			}
+			.cat-select:focus {
+				border-color: var(--accent);
+			}
+			.cat-select.changed {
+				border-color: var(--accent);
+				background: rgba(99, 202, 183, 0.08);
+			}
+			.actions {
+				display: flex;
+				gap: 12px;
+				align-items: center;
+				flex-wrap: wrap;
+			}
+			.btn-save {
+				padding: 12px 28px;
+				border-radius: 9px;
+				border: 1px solid rgba(99, 202, 183, 0.3);
+				background: linear-gradient(135deg, #0d5c4e, #1a7a67);
+				color: #e8f0ee;
+				font-family: "Syne", sans-serif;
+				font-size: 0.9rem;
+				font-weight: 700;
+				cursor: pointer;
+				transition: all 0.2s;
+				box-shadow: 0 4px 20px rgba(99, 202, 183, 0.1);
+			}
+			.btn-save:hover:not(:disabled) {
+				transform: translateY(-1px);
+			}
+			.btn-save:disabled {
+				opacity: 0.5;
+				cursor: not-allowed;
+				transform: none;
+			}
+			.change-count {
+				font-size: 0.8rem;
+				color: var(--muted);
+			}
+			.change-count strong {
+				color: var(--accent);
+			}
+			.spinner {
+				display: inline-block;
+				width: 16px;
+				height: 16px;
+				border: 2px solid rgba(99, 202, 183, 0.2);
+				border-top-color: var(--accent);
+				border-radius: 50%;
+				animation: spin 0.6s linear infinite;
+				vertical-align: middle;
+				margin-right: 6px;
+			}
+			@keyframes spin {
+				to {
+					transform: rotate(360deg);
+				}
+			}
+			#status {
+				font-size: 0.8rem;
+				color: var(--muted);
+			}
+		</style>
+	</head>
+	<body>
+		<div class="header">
+			<div>
+				<h1>🔍 Review Uncategorized</h1>
+				<div class="subtitle">
+					Assign categories to improve your report accuracy
+				</div>
+			</div>
+			<a href="__REPORT_URL__" class="back">← Back to report</a>
+		</div>
+		<div class="info-bar">
+			<strong>__OTHER_COUNT__ transactions</strong> are uncategorized.
+			Assign categories below and click
+			<strong>Save &amp; Regenerate</strong>.
+		</div>
+		<div class="table-wrap">
+			<table>
+				<thead>
+					<tr>
+						<th>Date</th>
+						<th>Description</th>
+						<th>Amount</th>
+						<th>Current</th>
+						<th>Assign to</th>
+					</tr>
+				</thead>
+				<tbody>
+					__ROWS__
+				</tbody>
+			</table>
+		</div>
+		<div class="actions">
+			<button class="btn-save" id="save-btn" onclick="saveChanges()">
+				Save &amp; Regenerate Report
+			</button>
+			<span class="change-count" id="change-count"></span>
+			<span id="status"></span>
+		</div>
+		<script>
+			const sessionId = "__SESSION_ID__";
+			const overrides = {};
+			document.querySelectorAll(".cat-select").forEach((sel) => {
+				sel.addEventListener("change", () => {
+					const idx = sel.dataset.idx;
+					if (sel.value) {
+						overrides[idx] = sel.value;
+						sel.classList.add("changed");
+					} else {
+						delete overrides[idx];
+						sel.classList.remove("changed");
+					}
+					updateCount();
+				});
+			});
+			function updateCount() {
+				const n = Object.keys(overrides).length;
+				const el = document.getElementById("change-count");
+				el.innerHTML =
+					n > 0
+						? `<strong>${n}</strong> change${n !== 1 ? "s" : ""} pending`
+						: "";
+			}
+			async function saveChanges() {
+				if (!Object.keys(overrides).length) {
+					document.getElementById("status").textContent =
+						"⚠ No changes made.";
+					return;
+				}
+				const btn = document.getElementById("save-btn");
+				const status = document.getElementById("status");
+				btn.disabled = true;
+				status.innerHTML =
+					'<span class="spinner"></span>Regenerating...';
+				try {
+					const res = await fetch(`/review/${sessionId}`, {
+						method: "POST",
+						headers: { "Content-Type": "application/json" },
+						body: JSON.stringify({ overrides }),
+					});
+					if (!res.ok) {
+						const e = await res.json();
+						throw new Error(e.error);
+					}
+					const data = await res.json();
+					window.location.href = data.report_url;
+				} catch (err) {
+					status.textContent = "⚠ " + err.message;
+					btn.disabled = false;
+				}
+			}
+		</script>
+	</body>
+</html>

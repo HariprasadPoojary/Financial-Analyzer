@@ -6,6 +6,7 @@ Uses Jinja2 for the HTML template.
 Output: single .html file that works offline.
 """
 
+import json
 from pathlib import Path
 
 import plotly.graph_objects as go
@@ -220,11 +221,19 @@ def _chart_category_bar(result: AnalysisResult) -> str:
 # ── Main entry point ──────────────────────────────────────────────────────────
 
 
-def generate_report(result: AnalysisResult, output_path: str) -> str:
-    """
-    Render the HTML report and write to output_path.
-    Returns the output path.
-    """
+def generate_report(
+    result: AnalysisResult,
+    output_path: str,
+    session_id: str | None = None,
+) -> str:
+    """Render the HTML report and write to output_path."""
+    review_url = f"/review/{session_id}" if session_id else None
+    uncategorized_count = sum(
+        1
+        for _, row in result.transactions.iterrows()
+        if row["category"] in ("Other", "Other Income")
+    )
+
     env = Environment(autoescape=select_autoescape(["html"]))
     template = env.from_string(
         (Path(__file__).parent / "templates" / "report.html").read_text(encoding="utf-8")
@@ -236,6 +245,8 @@ def generate_report(result: AnalysisResult, output_path: str) -> str:
         monthly_chart=_chart_monthly_bar(result),
         daily_chart=_chart_daily_trend(result),
         cat_bar_chart=_chart_category_bar(result),
+        review_url=review_url if uncategorized_count > 0 else None,
+        uncategorized_count=uncategorized_count,
     )
 
     Path(output_path).write_text(html, encoding="utf-8")

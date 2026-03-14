@@ -4,7 +4,6 @@
 		<meta charset="UTF-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1.0" />
 		<title>Financial Analyzer</title>
-		<link rel="preconnect" href="https://fonts.googleapis.com" />
 		<link
 			href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Mono:wght@400;500&display=swap"
 			rel="stylesheet"
@@ -20,9 +19,9 @@
 			:root {
 				--bg: #080c12;
 				--surface: #0e1520;
+				--surface2: #162030;
 				--border: rgba(99, 202, 183, 0.15);
 				--accent: #63cab7;
-				--accent2: #f0a500;
 				--text: #e8f0ee;
 				--muted: #5a7a72;
 				--danger: #e05555;
@@ -83,11 +82,11 @@
 				position: relative;
 				z-index: 1;
 				width: 100%;
-				max-width: 560px;
+				max-width: 580px;
 			}
 			.header {
 				text-align: center;
-				margin-bottom: 48px;
+				margin-bottom: 40px;
 			}
 			.logo-mark {
 				display: inline-flex;
@@ -99,7 +98,7 @@
 				background: linear-gradient(135deg, #0d4a3f, #1a7a67);
 				border: 1px solid var(--accent);
 				font-size: 24px;
-				margin-bottom: 20px;
+				margin-bottom: 18px;
 				box-shadow: 0 0 40px rgba(99, 202, 183, 0.2);
 			}
 			h1 {
@@ -118,15 +117,31 @@
 			}
 			.subtitle {
 				color: var(--muted);
-				font-size: 0.9rem;
-				margin-top: 10px;
+				font-size: 0.88rem;
+				margin-top: 8px;
 				font-family: "DM Mono", monospace;
-				letter-spacing: 0.02em;
+			}
+			.nav-link {
+				position: absolute;
+				top: 0;
+				right: 0;
+				color: var(--muted);
+				font-size: 0.8rem;
+				font-family: "DM Mono", monospace;
+				text-decoration: none;
+				padding: 6px 12px;
+				border: 1px solid var(--border);
+				border-radius: 7px;
+				transition: all 0.2s;
+			}
+			.nav-link:hover {
+				color: var(--accent);
+				border-color: var(--accent);
 			}
 			.dropzone {
 				border: 1.5px dashed var(--border);
 				border-radius: 16px;
-				padding: 48px 32px;
+				padding: 40px 32px;
 				text-align: center;
 				cursor: pointer;
 				transition: all 0.25s ease;
@@ -154,8 +169,8 @@
 					inset 0 0 40px rgba(99, 202, 183, 0.03);
 			}
 			.drop-icon {
-				font-size: 2.4rem;
-				margin-bottom: 16px;
+				font-size: 2.2rem;
+				margin-bottom: 14px;
 				display: block;
 				animation: float 3s ease-in-out infinite;
 			}
@@ -171,8 +186,7 @@
 			.drop-title {
 				font-size: 1rem;
 				font-weight: 700;
-				color: var(--text);
-				margin-bottom: 6px;
+				margin-bottom: 5px;
 			}
 			.drop-sub {
 				font-size: 0.8rem;
@@ -185,8 +199,42 @@
 			input[type="file"] {
 				display: none;
 			}
-			#file-list {
+			.date-range {
+				display: grid;
+				grid-template-columns: 1fr 1fr;
+				gap: 12px;
 				margin-top: 16px;
+			}
+			.date-field label {
+				display: block;
+				font-size: 0.72rem;
+				color: var(--muted);
+				font-family: "DM Mono", monospace;
+				margin-bottom: 5px;
+				text-transform: uppercase;
+				letter-spacing: 0.06em;
+			}
+			.date-field input {
+				width: 100%;
+				background: var(--surface);
+				border: 1px solid var(--border);
+				color: var(--text);
+				padding: 9px 12px;
+				border-radius: 8px;
+				font-family: "DM Mono", monospace;
+				font-size: 0.84rem;
+				outline: none;
+				transition: border-color 0.2s;
+			}
+			.date-field input:focus {
+				border-color: var(--accent);
+			}
+			.date-field input::-webkit-calendar-picker-indicator {
+				filter: invert(0.5);
+				cursor: pointer;
+			}
+			#file-list {
+				margin-top: 14px;
 				display: flex;
 				flex-direction: column;
 				gap: 8px;
@@ -214,7 +262,6 @@
 			}
 			.file-name {
 				flex: 1;
-				color: var(--text);
 				font-family: "DM Mono", monospace;
 				overflow: hidden;
 				text-overflow: ellipsis;
@@ -228,21 +275,21 @@
 			.file-remove {
 				cursor: pointer;
 				color: var(--muted);
-				font-size: 1rem;
-				transition: color 0.2s;
 				background: none;
 				border: none;
 				padding: 2px 4px;
+				font-size: 1rem;
+				transition: color 0.2s;
 			}
 			.file-remove:hover {
 				color: var(--danger);
 			}
 			.btn {
 				width: 100%;
-				margin-top: 20px;
-				padding: 15px 24px;
+				margin-top: 18px;
+				padding: 14px 24px;
 				border-radius: 10px;
-				border: none;
+				border: 1px solid rgba(99, 202, 183, 0.3);
 				background: linear-gradient(135deg, #0d5c4e, #1a7a67);
 				color: #e8f0ee;
 				font-family: "Syne", sans-serif;
@@ -250,8 +297,7 @@
 				font-weight: 700;
 				letter-spacing: 0.04em;
 				cursor: pointer;
-				transition: all 0.2s ease;
-				border: 1px solid rgba(99, 202, 183, 0.3);
+				transition: all 0.2s;
 				box-shadow: 0 4px 24px rgba(99, 202, 183, 0.1);
 				display: none;
 			}
@@ -269,13 +315,13 @@
 			}
 			#progress {
 				display: none;
-				margin-top: 24px;
+				margin-top: 22px;
 				text-align: center;
 			}
 			.spinner {
 				width: 36px;
 				height: 36px;
-				margin: 0 auto 14px;
+				margin: 0 auto 12px;
 				border: 2px solid rgba(99, 202, 183, 0.15);
 				border-top-color: var(--accent);
 				border-radius: 50%;
@@ -316,7 +362,7 @@
 			}
 			#error-box {
 				display: none;
-				margin-top: 16px;
+				margin-top: 14px;
 				background: rgba(224, 85, 85, 0.1);
 				border: 1px solid rgba(224, 85, 85, 0.3);
 				border-radius: 9px;
@@ -326,7 +372,7 @@
 				font-family: "DM Mono", monospace;
 			}
 			.footer {
-				margin-top: 32px;
+				margin-top: 28px;
 				text-align: center;
 				font-size: 0.72rem;
 				color: var(--muted);
@@ -338,11 +384,12 @@
 		<div class="orb orb-1"></div>
 		<div class="orb orb-2"></div>
 		<div class="container">
+			<a href="/settings" class="nav-link">⚙ Categories</a>
 			<div class="header">
 				<div class="logo-mark">₹</div>
 				<h1>Financial<br />Analyzer</h1>
 				<p class="subtitle">
-					// drop your bank statements in .csv → get insights
+					// drop your bank statements → get insights
 				</p>
 			</div>
 			<div
@@ -350,13 +397,23 @@
 				id="dropzone"
 				onclick="document.getElementById('file-input').click()"
 			>
-				<span class="drop-icon">📒</span>
+				<span class="drop-icon">📂</span>
 				<div class="drop-title">Drop CSV files here</div>
 				<div class="drop-sub">
 					or click to browse &nbsp;·&nbsp;
 					<span>multiple files supported</span>
 				</div>
 				<input type="file" id="file-input" accept=".csv" multiple />
+			</div>
+			<div class="date-range">
+				<div class="date-field">
+					<label>From date (optional)</label
+					><input type="date" id="date-from" />
+				</div>
+				<div class="date-field">
+					<label>To date (optional)</label
+					><input type="date" id="date-to" />
+				</div>
 			</div>
 			<div id="file-list"></div>
 			<button class="btn" id="analyze-btn" onclick="submitFiles()">
@@ -404,45 +461,38 @@
 				.addEventListener("change", (e) =>
 					addFiles([...e.target.files]),
 				);
-
-			function addFiles(newFiles) {
-				const csvs = newFiles.filter((f) =>
-					f.name.toLowerCase().endsWith(".csv"),
-				);
-				csvs.forEach((f) => {
-					if (
-						!selectedFiles.find(
-							(x) => x.name === f.name && x.size === f.size,
+			function addFiles(f) {
+				f.filter((x) => x.name.toLowerCase().endsWith(".csv")).forEach(
+					(x) => {
+						if (
+							!selectedFiles.find(
+								(y) => y.name === x.name && y.size === x.size,
+							)
 						)
-					)
-						selectedFiles.push(f);
-				});
+							selectedFiles.push(x);
+					},
+				);
 				renderFileList();
 			}
-
-			function removeFile(idx) {
-				selectedFiles.splice(idx, 1);
+			function removeFile(i) {
+				selectedFiles.splice(i, 1);
 				renderFileList();
 			}
-
 			function renderFileList() {
 				document.getElementById("file-list").innerHTML = selectedFiles
 					.map(
 						(f, i) => `
-                                    <div class="file-item">
-                                        <span>📄</span>
-                                        <span class="file-name">${f.name}</span>
-                                        <span class="file-size">${(f.size / 1024).toFixed(1)} KB</span>
-                                        <button class="file-remove" onclick="removeFile(${i})">✕</button>
-                                    </div>
-                                `,
+      <div class="file-item">📄
+        <span class="file-name">${f.name}</span>
+        <span class="file-size">${(f.size / 1024).toFixed(1)} KB</span>
+        <button class="file-remove" onclick="removeFile(${i})">✕</button>
+      </div>`,
 					)
 					.join("");
 				document
 					.getElementById("analyze-btn")
 					.classList.toggle("visible", selectedFiles.length > 0);
 			}
-
 			async function submitFiles() {
 				if (!selectedFiles.length) return;
 				const btn = document.getElementById("analyze-btn");
@@ -453,17 +503,21 @@
 				progress.style.display = "block";
 				errorBox.style.display = "none";
 				const steps = ["step-1", "step-2", "step-3", "step-4"];
-				let stepIdx = 0;
+				let si = 0;
 				setStep(steps[0], "active");
 				const timer = setInterval(() => {
-					if (stepIdx < steps.length - 1) {
-						setStep(steps[stepIdx], "done");
-						stepIdx++;
-						setStep(steps[stepIdx], "active");
+					if (si < steps.length - 1) {
+						setStep(steps[si], "done");
+						si++;
+						setStep(steps[si], "active");
 					}
 				}, 900);
 				const form = new FormData();
 				selectedFiles.forEach((f) => form.append("files", f));
+				const df = document.getElementById("date-from").value;
+				const dt = document.getElementById("date-to").value;
+				if (df) form.append("date_from", df);
+				if (dt) form.append("date_to", dt);
 				try {
 					const res = await fetch("/analyze", {
 						method: "POST",
@@ -473,9 +527,7 @@
 					steps.forEach((s) => setStep(s, "done"));
 					if (!res.ok) {
 						const err = await res.json();
-						throw new Error(
-							err.error || "🤔 Failed to parse the file(s) 🥲",
-						);
+						throw new Error(err.error || "Unknown error");
 					}
 					const data = await res.json();
 					await new Promise((r) => setTimeout(r, 400));
@@ -489,7 +541,6 @@
 					errorBox.textContent = "⚠ " + err.message;
 				}
 			}
-
 			function setStep(id, state) {
 				const el = document.getElementById(id);
 				el.classList.remove("active", "done");
