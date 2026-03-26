@@ -8,13 +8,14 @@ Nothing here renders anything — pure data transformation.
 """
 
 from dataclasses import dataclass, field
+
 import pandas as pd
 
 
 @dataclass
 class MonthlySummary:
-    month: str          # "2024-01"
-    month_label: str    # "Jan 2024"
+    month: str  # "2024-01"
+    month_label: str  # "Jan 2024"
     income: float
     expenses: float
     net: float
@@ -23,7 +24,7 @@ class MonthlySummary:
 @dataclass
 class CategorySummary:
     category: str
-    total: float        # always positive
+    total: float  # always positive
     count: int
     pct_of_expenses: float
 
@@ -31,7 +32,7 @@ class CategorySummary:
 @dataclass
 class TopMerchant:
     description: str
-    total: float        # always positive
+    total: float  # always positive
     count: int
     category: str
 
@@ -47,7 +48,7 @@ class AnalysisResult:
     total_income: float
     total_expenses: float
     net_savings: float
-    savings_rate: float         # % of income saved
+    savings_rate: float  # % of income saved
 
     # Breakdowns
     monthly: list[MonthlySummary]
@@ -55,7 +56,7 @@ class AnalysisResult:
     top_merchants: list[TopMerchant]
 
     # Daily spending series (for trend chart)
-    daily_expenses: dict        # {"2024-01-05": 45.99, ...}
+    daily_expenses: dict  # {"2024-01-05": 45.99, ...}
 
     # UPI/Transfer breakdown (debit only — useful for Indian banks)
     upi_debits: list[TopMerchant] = field(default_factory=list)
@@ -102,12 +103,8 @@ def analyze(df: pd.DataFrame, warnings: list[str] | None = None) -> AnalysisResu
     savings_rate = (net_savings / total_income * 100) if total_income > 0 else 0.0
 
     # ── Monthly summaries ─────────────────────────────────────────────────────
-    monthly_income = (
-        income_df.groupby("month")["amount"].sum().rename("income")
-    )
-    monthly_expenses = (
-        expense_df.groupby("month")["amount"].sum().abs().rename("expenses")
-    )
+    monthly_income = income_df.groupby("month")["amount"].sum().rename("income")
+    monthly_expenses = expense_df.groupby("month")["amount"].sum().abs().rename("expenses")
 
     monthly_df = pd.DataFrame({"income": monthly_income, "expenses": monthly_expenses})
     monthly_df = monthly_df.fillna(0).sort_index()
@@ -137,7 +134,9 @@ def analyze(df: pd.DataFrame, warnings: list[str] | None = None) -> AnalysisResu
             category=row["category"],
             total=round(row["total"], 2),
             count=int(row["count"]),
-            pct_of_expenses=round(row["total"] / total_expenses * 100, 1) if total_expenses > 0 else 0,
+            pct_of_expenses=(
+                round(row["total"] / total_expenses * 100, 1) if total_expenses > 0 else 0
+            ),
         )
         for _, row in cat_df.iterrows()
     ]
@@ -185,12 +184,7 @@ def analyze(df: pd.DataFrame, warnings: list[str] | None = None) -> AnalysisResu
     ]
 
     # ── Daily expense series ──────────────────────────────────────────────────
-    daily = (
-        expense_df.groupby(expense_df["date"].dt.date)["amount"]
-        .sum()
-        .abs()
-        .sort_index()
-    )
+    daily = expense_df.groupby(expense_df["date"].dt.date)["amount"].sum().abs().sort_index()
     daily_expenses = {str(k): round(v, 2) for k, v in daily.items()}
 
     # ── Period metadata ───────────────────────────────────────────────────────

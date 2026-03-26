@@ -10,14 +10,13 @@ Supported formats auto-detected:
     - OFX-style: Date, Name, Amount, Transaction Type
 """
 
-import os
 import re
 from dataclasses import dataclass
 from pathlib import Path
 
 import pandas as pd
 
-from const import (
+from app.const import (
     BALANCE_ALIASES,
     CREDIT_ALIASES,
     DATE_ALIASES,

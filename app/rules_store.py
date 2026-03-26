@@ -11,7 +11,7 @@ on the next analysis run without restarting the server.
 import json
 from pathlib import Path
 
-from const import CATEGORY_RULES
+from app.const import CATEGORY_RULES
 
 DATA_DIR = Path(__file__).parent.parent / "data"
 RULES_FILE = DATA_DIR / "rules.json"

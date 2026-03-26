@@ -6,7 +6,6 @@ Uses Jinja2 for the HTML template.
 Output: single .html file that works offline.
 """
 
-import json
 from pathlib import Path
 
 import plotly.graph_objects as go
