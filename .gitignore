@@ -8,5 +8,8 @@ wheels/
 
 # Virtual environments
 .venv
+
+# Project folders
 uploads/
 reports/
+sessions/

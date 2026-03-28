@@ -82,14 +82,14 @@ async def analyze_statements(
     session_id = uuid.uuid4().hex[:10]
     saved_paths, parse_results, all_warnings = [], [], []
 
-    for upload in files:
-         if not file.filename or not file.filename.endswith(".csv"):
+    for file in files:
+        if not file.filename or not file.filename.endswith(".csv"):
             return JSONResponse(
                 status_code=400,
-                content={"error": f"Only CSV files accepted. Got: {upload.filename}"},
+                content={"error": f"Only CSV files accepted. Got: {file.filename}"},
             )
-        dest = UPLOAD_DIR / f"{session_id}_{upload.filename}"
-        dest.write_bytes(await upload.read())
+        dest = UPLOAD_DIR / f"{session_id}_{file.filename}"
+        dest.write_bytes(await file.read())
         saved_paths.append(dest)
         try:
             result = parse_csv(str(dest))
@@ -99,7 +99,7 @@ async def analyze_statements(
             for p in saved_paths:
                 p.unlink(missing_ok=True)
             return JSONResponse(
-                status_code=422, content={"error": f"Failed to parse {upload.filename}: {e}"}
+                status_code=422, content={"error": f"Failed to parse {file.filename}: {e}"}
             )
 
     df = parse_results[0].df if len(parse_results) == 1 else merge_statements(parse_results)
