@@ -5,9 +5,17 @@ DEBIT_ALIASES = ["Debit", "CR"]
 CREDIT_ALIASES = ["Credit", "DR"]
 BALANCE_ALIASES = ["Balance", "BAL"]
 
-# ── Category rules: (category, [keywords/patterns], transaction_type)
-# Order matters — more specific rules should come first.
-# transaction_type: "credit", "debit", or "both" (default)
+# ── Category rules: (category, [patterns], transaction_type) ──────────────────
+#
+# Pattern syntax:
+#   plain text        → case-insensitive substring match  (default, recommended)
+#   case:Text         → case-sensitive substring match
+#   re:\bword\b       → raw regex, case-insensitive
+#   re:case:[A-Z]+    → raw regex, case-sensitive
+#
+# Order matters — first match wins.
+# transaction_type: "credit", "debit", or "both"
+#
 CATEGORY_RULES: list[tuple[str, list[str], str]] = [
     # Income - only for credits
     (

@@ -1,9 +1,13 @@
 """
-Categorizer — keyword/regex-based transaction categorization.
+Categorizer — transaction categorization with simple pattern matching.
 
-Rules are loaded from rules_store (which reads data/rules.json if it exists,
-falling back to const.py). Rules are compiled once per categorize_dataframe()
-call so changes via the UI take effect on the next analysis run.
+Pattern syntax (what users type in the UI):
+    zomato            → case-insensitive substring match  (default)
+    case:Zomato       → case-sensitive substring match
+    re:\bUPI/\w+      → regex, case-insensitive
+    re:case:UPI/[A-Z] → regex, case-sensitive
+
+Order of prefixes is always: re: first, case: second.
 """
 
 import re
@@ -11,11 +15,48 @@ import re
 import pandas as pd
 
 
+def pattern_to_regex(pattern: str) -> re.Pattern:
+    """
+    Compile a user-facing pattern string into a compiled regex.
+
+    Handles four modes based on prefix:
+        - Plain text  → re.escape() + case-insensitive
+        - case:       → re.escape() + case-sensitive
+        - re:         → raw regex + case-insensitive
+        - re:case:    → raw regex + case-sensitive
+    """
+    raw_mode = False
+    case_sensitive = False
+
+    if pattern.startswith("re:"):
+        raw_mode = True
+        pattern = pattern[3:]
+
+    if pattern.startswith("case:"):
+        case_sensitive = True
+        pattern = pattern[5:]
+
+    flags = 0 if case_sensitive else re.IGNORECASE
+
+    if not raw_mode:
+        pattern = re.escape(pattern)
+
+    return re.compile(pattern, flags)
+
+
 def _compile_rules(rules: list[tuple]) -> list[tuple]:
-    return [
-        (category, [re.compile(p, re.IGNORECASE) for p in patterns], txn_type)
-        for category, patterns, txn_type in rules
-    ]
+    """Compile a list of (category, patterns, txn_type) into regex patterns."""
+    compiled = []
+    for category, patterns, txn_type in rules:
+        compiled_patterns = []
+        for p in patterns:
+            try:
+                compiled_patterns.append(pattern_to_regex(p))
+            except re.error as e:
+                # Bad regex — skip silently rather than crashing the whole run
+                print(f"[categorizer] Invalid pattern '{p}' in '{category}': {e}")
+        compiled.append((category, compiled_patterns, txn_type))
+    return compiled
 
 
 def categorize_transaction(
@@ -24,6 +65,15 @@ def categorize_transaction(
     txn_type: str = "both",
     compiled_rules: list | None = None,
 ) -> str:
+    """
+    Return the category for a single transaction.
+
+    Args:
+        description:    Transaction description to match against patterns
+        amount:         Transaction amount (used for fallback only)
+        txn_type:       'credit', 'debit', or 'both'
+        compiled_rules: Pre-compiled rules. If None, loads from rules_store.
+    """
     if pd.isna(amount):
         return "Other"
 
@@ -46,7 +96,11 @@ def categorize_dataframe(
     overrides: dict | None = None,
 ) -> pd.DataFrame:
     """
-    Add a 'category' column. Loads rules fresh from rules_store on each call.
+    Add a 'category' column to the normalized transaction dataframe.
+
+    Loads rules fresh from rules_store on each call so UI changes
+    take effect immediately on the next analysis run.
+
     overrides: optional {row_index: category} applied after rule matching.
     """
     from rules_store import get_rules

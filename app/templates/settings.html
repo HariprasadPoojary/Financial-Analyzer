@@ -302,6 +302,35 @@
 			.new-cat-input:focus {
 				border-color: var(--accent);
 			}
+			.syntax-legend {
+				display: flex;
+				flex-wrap: wrap;
+				align-items: center;
+				gap: 6px;
+				background: var(--surface);
+				border: 1px solid var(--border);
+				border-radius: 9px;
+				padding: 10px 16px;
+				margin-bottom: 16px;
+				font-size: 0.75rem;
+				color: var(--muted);
+			}
+			.legend-title {
+				color: var(--accent);
+				font-weight: 600;
+				margin-right: 4px;
+			}
+			.legend-item code {
+				background: var(--surface3);
+				padding: 1px 6px;
+				border-radius: 4px;
+				color: var(--text);
+				font-family: "DM Mono", monospace;
+				font-size: 0.73rem;
+			}
+			.legend-sep {
+				color: var(--border);
+			}
 		</style>
 	</head>
 	<body>
@@ -323,6 +352,22 @@
 				Reset to defaults
 			</button>
 			<span id="status"></span>
+		</div>
+		<div class="syntax-legend">
+			<span class="legend-title">Pattern syntax:</span>
+			<span class="legend-item"
+				><code>zomato</code> substring, case-insensitive</span
+			>
+			<span class="legend-sep">·</span>
+			<span class="legend-item"
+				><code>case:Zomato</code> case-sensitive</span
+			>
+			<span class="legend-sep">·</span>
+			<span class="legend-item"><code>re:\bword\b</code> raw regex</span>
+			<span class="legend-sep">·</span>
+			<span class="legend-item"
+				><code>re:case:ABC</code> regex + case-sensitive</span
+			>
 		</div>
 		<div class="categories" id="cat-list">
 			<div style="color: var(--muted); font-size: 0.82rem">
@@ -380,7 +425,7 @@
 							.map(
 								(p, pi) => `
                 <div class="pattern-row">
-                  <input class="pattern-input" value="${esc(p)}" placeholder="regex pattern..."
+                  <input class="pattern-input" value="${esc(p)}"  placeholder="e.g. Zomato  or  case:NEFT  or  re:\bUPI/\w+"
                          oninput="rules[${ri}].patterns[${pi}]=this.value"/>
                   <button class="del-pat" onclick="delPat(${ri},${pi})">✕</button>
                 </div>`,
