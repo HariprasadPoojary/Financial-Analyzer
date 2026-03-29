@@ -10,6 +10,14 @@ dependencies = [
     "jinja2>=3.1.6",
     "pandas>=3.0.1",
     "plotly>=6.5.2",
+    "pytest>=9.0.2",
     "python-multipart>=0.0.22",
     "uvicorn>=0.41.0",
 ]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+addopts = "-v --tb=short"

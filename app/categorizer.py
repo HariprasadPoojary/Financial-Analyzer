@@ -14,6 +14,8 @@ import re
 
 import pandas as pd
 
+from .rules_store import get_rules
+
 
 def pattern_to_regex(pattern: str) -> re.Pattern:
     """
@@ -78,8 +80,6 @@ def categorize_transaction(
         return "Other"
 
     if compiled_rules is None:
-        from rules_store import get_rules
-
         compiled_rules = _compile_rules(get_rules())
 
     for category, patterns, rule_type in compiled_rules:
@@ -103,8 +103,6 @@ def categorize_dataframe(
 
     overrides: optional {row_index: category} applied after rule matching.
     """
-    from rules_store import get_rules
-
     compiled = _compile_rules(get_rules())
 
     df = df.copy()
