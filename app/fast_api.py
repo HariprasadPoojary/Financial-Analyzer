@@ -14,7 +14,6 @@ Routes:
 """
 
 import pickle
-import sys
 import uuid
 from pathlib import Path
 
@@ -22,14 +21,11 @@ import pandas as pd
 from fastapi import FastAPI, File, Form, Request, UploadFile
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 
-sys.path.insert(0, str(Path(__file__).parent))
-
-from parser import merge_statements, parse_csv
-
-from analyzer import analyze
-from categorizer import categorize_dataframe
-from report_builder import generate_report
-from rules_store import (
+from app.analyzer import analyze
+from app.categorizer import categorize_dataframe
+from app.parser import merge_statements, parse_csv
+from app.report_builder import generate_report
+from app.rules_store import (
     get_category_names,
     get_rules_as_dicts,
     reset_to_defaults,

@@ -113,7 +113,7 @@ def analyze(df: pd.DataFrame, warnings: list[str] | None = None) -> AnalysisResu
     monthly = [
         MonthlySummary(
             month=str(period),
-            month_label=_fmt_month(period),
+            month_label=_fmt_month(period),  # type: ignore
             income=round(row["income"], 2),
             expenses=round(row["expenses"], 2),
             net=round(row["net"], 2),

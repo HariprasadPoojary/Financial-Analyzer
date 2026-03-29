@@ -10,8 +10,9 @@ from pathlib import Path
 
 import plotly.graph_objects as go
 import plotly.io as pio
-from .analyzer import AnalysisResult
 from jinja2 import Environment, select_autoescape
+
+from app.analyzer import AnalysisResult
 
 # ── Color palette ─────────────────────────────────────────────────────────────
 

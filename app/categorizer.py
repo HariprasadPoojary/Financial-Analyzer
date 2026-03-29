@@ -14,7 +14,7 @@ import re
 
 import pandas as pd
 
-from .rules_store import get_rules
+from app.rules_store import get_rules
 
 
 def pattern_to_regex(pattern: str) -> re.Pattern:

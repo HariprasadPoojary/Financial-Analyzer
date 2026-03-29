@@ -2,11 +2,7 @@
 Shared fixtures used across all test modules.
 """
 
-import sys
 from pathlib import Path
-
-# Make app importable - MUST be before any app imports
-sys.path.insert(0, str(Path(__file__).parent.parent))
 
 import pandas as pd
 import pytest
