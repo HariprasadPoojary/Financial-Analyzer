@@ -4,7 +4,7 @@ Categorizer — transaction categorization with simple pattern matching.
 Pattern syntax (what users type in the UI):
     zomato            → case-insensitive substring match  (default)
     case:Zomato       → case-sensitive substring match
-    re:\bUPI/\w+      → regex, case-insensitive
+    re:\bUPI/\\w+      → regex, case-insensitive
     re:case:UPI/[A-Z] → regex, case-sensitive
 
 Order of prefixes is always: re: first, case: second.
@@ -37,6 +37,11 @@ def pattern_to_regex(pattern: str) -> re.Pattern:
     if pattern.startswith("case:"):
         case_sensitive = True
         pattern = pattern[5:]
+
+    if pattern.startswith("re:case:"):
+        raw_mode = True
+        case_sensitive = True
+        pattern = pattern[8:]
 
     flags = 0 if case_sensitive else re.IGNORECASE
 

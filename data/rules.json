@@ -2,119 +2,118 @@
   {
     "category": "Income",
     "patterns": [
-      "\\bsalary\\b",
-      "\\bSALARY\\b",
-      "\\bACH-CR\\b",
-      "\\bIMPS/P2A\\b",
-      "\\bMBB-TD/\\b",
-      "\\bNEFT\\b",
-      "\\bUPI/CR\\b",
-      "\\bSB:\\b"
+      "salary",
+      "SALARY",
+      "ACH-CR",
+      "IMPS/P2A",
+      "MBB-TD/",
+      "NEFT",
+      "UPI/CR",
+      "SB:"
     ],
     "txn_type": "credit"
   },
   {
     "category": "Housing",
     "patterns": [
-      "\\brent\\b",
-      "\\bBABITHA  MANJUNATH   /\\b"
+      "rent",
+      "BABITHA  MANJUNATH   /"
     ],
     "txn_type": "debit"
   },
   {
     "category": "Groceries",
     "patterns": [
-      "\\bZepto\\b",
-      "\\bgrocery\\b",
-      "\\bfood store\\b",
-      "\\bmarket\\b"
+      "Zepto",
+      "DMart",
+      "Instamart",
+      "BigBasket",
+      "market"
     ],
     "txn_type": "debit"
   },
   {
     "category": "Dining",
     "patterns": [
-      "\\brestaurant\\b",
-      "\\bcafe\\b",
-      "\\bZomato\\b",
-      "\\bDominos\\b"
+      "restaurant",
+      "cafe",
+      "Zomato",
+      "Dominos",
+      "Swiggy"
     ],
     "txn_type": "debit"
   },
   {
     "category": "Transport",
     "patterns": [
-      "\\buber\\b",
-      "\\bRedbus\\b"
+      "uber",
+      "Redbus",
+      "Ola",
+      "Cab"
     ],
     "txn_type": "debit"
   },
   {
     "category": "Utilities",
     "patterns": [
-      "\\belectric\\b",
-      "\\bgas bill\\b",
-      "\\bwater bill\\b",
-      "\\binternet\\b",
-      "\\bbroadband\\b",
-      "\\bphone\\b",
-      "\\bmobile\\b",
-      "\\bbt group\\b",
-      "\\bvirgin media\\b",
-      "\\bpge\\b",
-      "\\bcon edison\\b",
-      "\\bcouncil tax\\b",
-      "\\brates\\b"
+      "electric",
+      "gas bill",
+      "water bill",
+      "internet",
+      "broadband",
+      "phone",
+      "mobile"
     ],
     "txn_type": "debit"
   },
   {
     "category": "Subscriptions & Entertainment",
     "patterns": [
-      "\\bnetflix\\b",
-      "\\bDISTRICT\\b",
-      "\\bbookmyshow\\b"
+      "netflix",
+      "DISTRICT",
+      "bookmyshow"
     ],
     "txn_type": "debit"
   },
   {
     "category": "Shopping",
     "patterns": [
-      "\\bamazon\\b",
-      "\\bCreditCard Payment\\b"
+      "amazon",
+      "CreditCard Payment"
     ],
     "txn_type": "debit"
   },
   {
     "category": "Cash & ATM",
     "patterns": [
-      "\\bATMCard\\b"
+      "ATMCard"
     ],
     "txn_type": "debit"
   },
   {
     "category": "UPI & Transfers",
     "patterns": [
-      "\\bUPI/\\b",
-      "\\bUPI/CR\\b",
-      "\\bRAZORPAY/\\b",
-      "\\bNEFT/\\b",
-      "\\bUPILITE\\b"
+      "re:^UPI(?!.*Groww).*$",
+      "UPI/CR",
+      "RAZORPAY/",
+      "NEFT/",
+      "UPILITE"
     ],
     "txn_type": "both"
   },
   {
     "category": "Investments",
     "patterns": [
-      "\\bMutual Funds\\b",
-      "\\bGroww\\b",
-      "\\bPPF\\b",
-      "\\bRD/\\b",
-      "\\bACH-DR-Groww\\b",
-      "\\bLIC OF INDIA\\b",
-      "\\bECS/UTIBDE34161840202601\\b",
-      "\\bWEALTHYIN CUSTOMER\\b",
-      "\\bethereum\\b"
+      "Mutual Funds",
+      "Groww",
+      "PPF",
+      "RD/",
+      "ACH-DR-Groww",
+      "LIC OF INDIA",
+      "ECS/UTIBDE34161840202601",
+      "WEALTHYIN CUSTOMER",
+      "ethereum",
+      "re:^UPI.*Groww.*"
     ],
     "txn_type": "debit"
   },
