@@ -168,8 +168,6 @@ class TestCategorizeTransaction:
         assert cat == "Other"
 
     def test_nan_amount_returns_other(self):
-        import math
-
         cat = categorize_transaction("SOME TXN", float("nan"), "debit", [])
         assert cat == "Other"
 

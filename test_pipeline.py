@@ -1,4 +1,6 @@
+import os
 import sys
+import webbrowser
 
 sys.path.insert(0, "app")
 
@@ -29,9 +31,5 @@ print(
 generate_report(analysis, OUTPUT)
 print(f"✅ Report saved → {OUTPUT}")
 
-import os
-
 # Open it automatically
-import webbrowser
-
 webbrowser.open(f"file://{os.path.abspath(OUTPUT)}")
