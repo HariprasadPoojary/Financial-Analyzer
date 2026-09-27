@@ -14,8 +14,10 @@ Routes:
 """
 
 import pickle
+import re
 import uuid
-from datetime import date
+from datetime import date, datetime
+from html import escape
 from pathlib import Path
 
 import pandas as pd
@@ -62,6 +64,65 @@ def _load_session(session_id: str) -> dict | None:
 def _save_session(session_id: str, data: dict) -> None:
     with open(SESSION_DIR / f"{session_id}.pkl", "wb") as f:
         pickle.dump(data, f)
+
+
+def _recent_sessions_html(limit: int = 10) -> str:
+    """Render links for reports whose session data is still available."""
+    reports: list[tuple[float, str]] = []
+    for report_path in REPORT_DIR.glob("report_*.html"):
+        session_id = report_path.stem.removeprefix("report_")
+        if not re.fullmatch(r"[0-9a-f]{10}|[0-9a-f]{32}", session_id):
+            continue
+        try:
+            if not (SESSION_DIR / f"{session_id}.pkl").is_file():
+                continue
+            modified = report_path.stat().st_mtime
+        except OSError:
+            continue
+        reports.append((modified, session_id))
+
+    reports.sort(reverse=True)
+    if not reports:
+        return (
+            '<p class="recent-empty">'
+            "No reports yet. Upload a statement to create one."
+            "</p>"
+        )
+
+    items = []
+    for modified, session_id in reports[:limit]:
+        updated = datetime.fromtimestamp(modified).strftime("%b %d, %Y · %I:%M %p")
+        try:
+            session = _load_session(session_id)
+        except (
+            OSError,
+            EOFError,
+            pickle.UnpicklingError,
+            AttributeError,
+            ValueError,
+        ):
+            continue
+        source_files = session.get("source_files", []) if isinstance(session, dict) else []
+        if not isinstance(source_files, list):
+            source_files = []
+        filenames = [escape(name) for name in source_files if isinstance(name, str)]
+        label = ", ".join(filenames) if filenames else "Filename unavailable"
+        items.append(
+            f'<div class="session-entry" data-session-id="{escape(session_id)}">'
+            f'<a class="session-item" href="/report/{escape(session_id)}">'
+            f'<span class="session-info"><strong>{label}</strong>'
+            f'<small>Session {escape(session_id)}</small></span>'
+            f'<time>{escape(updated)}</time></a>'
+            f'<button class="session-delete" type="button" '
+            f'aria-label="Delete report {escape(session_id)}" '
+            f'onclick="deleteSession(\'{escape(session_id)}\')">Delete</button>'
+            "</div>"
+        )
+    return "".join(items) or (
+        '<p class="recent-empty">'
+        "No reports yet. Upload a statement to create one."
+        "</p>"
+    )
 
 
 # ── Analyze ───────────────────────────────────────────────────────────────────
@@ -151,7 +212,14 @@ async def analyze_statements(
             )
 
         df = categorize_dataframe(df)
-        _save_session(session_id, {"df": df, "warnings": all_warnings})
+        source_files = [
+            (file.filename or "").replace("\\", "/").rsplit("/", 1)[-1]
+            for file in files
+        ]
+        _save_session(
+            session_id,
+            {"df": df, "warnings": all_warnings, "source_files": source_files},
+        )
 
         analysis = analyze(df, all_warnings)
         report_path = REPORT_DIR / f"report_{session_id}.html"
@@ -179,6 +247,27 @@ def get_report(session_id: str):
             status_code=404,
         )
     return FileResponse(path, media_type="text/html")
+
+
+@app.delete("/api/sessions/{session_id}")
+def delete_session(session_id: str):
+    if not re.fullmatch(r"[0-9a-f]{10}|[0-9a-f]{32}", session_id):
+        return JSONResponse(status_code=400, content={"error": "Invalid session ID."})
+
+    session_path = SESSION_DIR / f"{session_id}.pkl"
+    report_path = REPORT_DIR / f"report_{session_id}.html"
+    if not session_path.is_file() and not report_path.is_file():
+        return JSONResponse(status_code=404, content={"error": "Session not found."})
+
+    try:
+        session_path.unlink(missing_ok=True)
+        report_path.unlink(missing_ok=True)
+    except OSError:
+        return JSONResponse(
+            status_code=500,
+            content={"error": "Could not delete the session and report."},
+        )
+    return JSONResponse(content={"ok": True})
 
 
 # ── Uncategorized Review ──────────────────────────────────────────────────────
@@ -250,7 +339,7 @@ async def apply_review(session_id: str, request: Request):
         if idx in df.index:
             df.at[idx, "category"] = cat
 
-    _save_session(session_id, {"df": df, "warnings": data["warnings"]})
+    _save_session(session_id, {**data, "df": df})
     analysis = analyze(df, data["warnings"])
     generate_report(analysis, str(REPORT_DIR / f"report_{session_id}.html"), session_id=session_id)
 
@@ -292,4 +381,6 @@ def reset_rules_api():
 @app.get("/", response_class=HTMLResponse)
 def index():
     """Serve the main HTML page with the file upload form."""
-    return (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+    return (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8").replace(
+        "__RECENT_SESSIONS__", _recent_sessions_html()
+    )

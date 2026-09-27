@@ -32,8 +32,12 @@ This roadmap tracks work from fixing the current application through new spendin
   - **Done when:** tests cover upload validation and success, missing reports/sessions, review rendering and submission, and rules read/save/reset behavior, including error responses.
 
 ### 1.5 Fix navigation from /report to Home page
-- [ ] **Add a "Back to Home" link on the report page.** The report page should link back to the home page so users can upload new statements without manually changing the URL.
+- [x] **Add a "Back to Home" link on the report page.** The report page should link back to the home page so users can upload new statements without manually changing the URL.
   - **Done when:** the report page has a working link to `/` that allows users to return to the upload page without losing their session or encountering errors.
+
+### 1.6 List of existing sessions on the home page
+- [x] **Display recent sessions on the home page.** Show a list of previously generated reports with links to view them, allowing users to easily access their past analyses without needing to remember session IDs.
+  - **Done when:** the home page displays a list of recent sessions with clickable links, and the list updates appropriately as new sessions are created or old ones expire.
 
 ## 2. Improve reliability and privacy
 
