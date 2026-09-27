@@ -15,6 +15,7 @@ Routes:
 
 import pickle
 import uuid
+from datetime import date
 from pathlib import Path
 
 import pandas as pd
@@ -72,65 +73,98 @@ async def analyze_statements(
     date_from: str = Form(default=None),
     date_to: str = Form(default=None),
 ):
-    if not files or all(f.filename == "" for f in files):
+    if not files or all(not f.filename for f in files):
         return JSONResponse(status_code=400, content={"error": "No files uploaded."})
 
-    session_id = uuid.uuid4().hex[:10]
-    saved_paths, parse_results, all_warnings = [], [], []
-
-    for file in files:
-        if not file.filename or not file.filename.endswith(".csv"):
-            return JSONResponse(
-                status_code=400,
-                content={"error": f"Only CSV files accepted. Got: {file.filename}"},
-            )
-        dest = UPLOAD_DIR / f"{session_id}_{file.filename}"
-        dest.write_bytes(await file.read())
-        saved_paths.append(dest)
-        try:
-            result = parse_csv(str(dest))
-            parse_results.append(result)
-            all_warnings.extend(result.warnings)
-        except Exception as e:
-            for p in saved_paths:
-                p.unlink(missing_ok=True)
-            return JSONResponse(
-                status_code=422, content={"error": f"Failed to parse {file.filename}: {e}"}
-            )
-
-    df = parse_results[0].df if len(parse_results) == 1 else merge_statements(parse_results)
-
-    # ── Date range filter ─────────────────────────────────────────────────────
-    if date_from:
-        try:
-            df = df[df["date"] >= pd.to_datetime(date_from)]
-        except Exception:
-            pass
-    if date_to:
-        try:
-            df = df[df["date"] <= pd.to_datetime(date_to)]
-        except Exception:
-            pass
-
-    if df.empty:
-        for p in saved_paths:
-            p.unlink(missing_ok=True)
+    invalid_files = [
+        f.filename or "(unnamed file)"
+        for f in files
+        if not f.filename or Path(f.filename).suffix.lower() != ".csv"
+    ]
+    if invalid_files:
         return JSONResponse(
-            status_code=422, content={"error": "No transactions in the selected date range."}
+            status_code=400,
+            content={
+                "error": "Only CSV files are accepted. Invalid file(s): "
+                + ", ".join(invalid_files)
+            },
         )
 
-    df = categorize_dataframe(df)
-    _save_session(session_id, {"df": df, "warnings": all_warnings})
+    def parse_date_filter(value: str | None, label: str) -> date | None:
+        if value is None or not value.strip():
+            return None
+        try:
+            parsed = date.fromisoformat(value.strip())
+        except ValueError:
+            raise ValueError(f"{label} must be a valid date in YYYY-MM-DD format.") from None
+        if parsed.isoformat() != value.strip():
+            raise ValueError(f"{label} must be a valid date in YYYY-MM-DD format.")
+        return parsed
 
-    analysis = analyze(df, all_warnings)
-    report_path = REPORT_DIR / f"report_{session_id}.html"
-    generate_report(analysis, str(report_path), session_id=session_id)
+    try:
+        start_date = parse_date_filter(date_from, "Start date")
+        end_date = parse_date_filter(date_to, "End date")
+    except ValueError as e:
+        return JSONResponse(status_code=400, content={"error": str(e)})
 
-    for p in saved_paths:
-        p.unlink(missing_ok=True)
+    if start_date and end_date and start_date > end_date:
+        return JSONResponse(
+            status_code=400,
+            content={"error": "Start date must be on or before end date."},
+        )
 
-    other_count = int((df["category"].isin(["Other", "Other Income"])).sum())
-    return JSONResponse(content={"report_url": f"/report/{session_id}", "other_count": other_count})
+    session_id = uuid.uuid4().hex[:10]
+    saved_paths: list[Path] = []
+    parse_results = []
+    all_warnings: list[str] = []
+
+    try:
+        for index, file in enumerate(files):
+            dest = UPLOAD_DIR / f"{session_id}_{index}.csv"
+            saved_paths.append(dest)
+            dest.write_bytes(await file.read())
+            try:
+                result = parse_csv(str(dest))
+            except Exception as e:
+                filename = file.filename or "uploaded file"
+                return JSONResponse(
+                    status_code=422,
+                    content={"error": f"Could not read {filename} as a valid CSV: {e}"},
+                )
+            parse_results.append(result)
+            all_warnings.extend(result.warnings)
+
+        df = parse_results[0].df if len(parse_results) == 1 else merge_statements(parse_results)
+
+    # ── Date range filter ─────────────────────────────────────────────────────
+        if start_date:
+            df = df[df["date"] >= pd.Timestamp(start_date)]
+        if end_date:
+            df = df[df["date"] <= pd.Timestamp(end_date)]
+
+        if df.empty:
+            return JSONResponse(
+                status_code=422,
+                content={
+                    "error": "No transactions remain after parsing and applying the selected date range."
+                },
+            )
+
+        df = categorize_dataframe(df)
+        _save_session(session_id, {"df": df, "warnings": all_warnings})
+
+        analysis = analyze(df, all_warnings)
+        report_path = REPORT_DIR / f"report_{session_id}.html"
+        generate_report(analysis, str(report_path), session_id=session_id)
+
+        other_count = int((df["category"].isin(["Other", "Other Income"])).sum())
+        return JSONResponse(
+            content={"report_url": f"/report/{session_id}", "other_count": other_count}
+        )
+    finally:
+        for path in saved_paths:
+            path.unlink(missing_ok=True)
+
 
 
 # ── Report ────────────────────────────────────────────────────────────────────
@@ -191,7 +225,7 @@ def review_page(session_id: str):
         </tr>"""
 
     return HTMLResponse(
-        (TEMPLATES_DIR / "settings.html")
+        (TEMPLATES_DIR / "review.html")
         .read_text(encoding="utf-8")
         .replace("__SESSION_ID__", session_id)
         .replace("__OTHER_COUNT__", str(len(other_df)))

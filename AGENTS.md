@@ -9,7 +9,9 @@ The application is aimed at personal bank statements, including Indian bank form
 ## Run and project layout
 
 - Python 3.14+ is specified in `pyproject.toml`; dependencies are managed with `uv`.
-- Validate Python code with `uv run ruff check .` and `uv run mypy` before committing. Install the Git hooks with `uv run pre-commit install`; the configured pre-commit hooks run both checks.
+- After each code change, run the full test suite with `.\.venv\Scripts\pytest.exe`.
+- Before committing, run `.\.venv\Scripts\ruff.exe check .` and `.\.venv\Scripts\mypy.exe` from the existing `.venv`.
+- Install the Git hooks with `uv run pre-commit install`; the configured pre-commit hooks run both checks.
 - Start the web application from the repository root with `uvicorn app.fast_api:app --reload --host 0.0.0.0 --port 8000`.
 - `app/` is a Python package. Imports use `from app.<module> import ...`.
 - `main.py` and `test_pipeline.py` are CLI/example scripts, not the FastAPI entry point. The web entry point is `app/fast_api.py`.

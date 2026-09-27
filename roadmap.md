@@ -13,12 +13,12 @@ This roadmap tracks work from fixing the current application through new spendin
 
 ### 1.1 Repair the transaction review page
 
-- [ ] **Serve the review UI from `review.html`.** The current `/review/{session_id}` route reads `settings.html` while inserting review-specific placeholders.
+- [x] **Serve the review UI from `review.html`.** The current `/review/{session_id}` route reads `settings.html` while inserting review-specific placeholders.
   - **Done when:** the route serves the review page, fills its session, transaction rows, count, and report link placeholders, and the browser can submit edits and return to the regenerated report.
 
 ### 1.2 Make upload and date errors reliable
 
-- [ ] **Validate uploaded files and date filters.** Check all files before processing, handle `.csv` extensions case-insensitively, validate date values and date order, and clean up temporary uploads on every failed request path.
+- [x] **Validate uploaded files and date filters.** Check all files before processing, handle `.csv` extensions case-insensitively, validate date values and date order, and clean up temporary uploads on every failed request path.
   - **Done when:** invalid file types, unreadable CSVs, invalid dates, reversed date ranges, and empty filtered results return clear errors; partial uploads are removed after failure; valid multiple-file uploads still work.
 
 ### 1.3 Protect transaction data rendered into HTML
@@ -30,6 +30,10 @@ This roadmap tracks work from fixing the current application through new spendin
 
 - [ ] **Add FastAPI route tests.** Use temporary upload, report, session, and rules paths so tests do not touch a user's local data.
   - **Done when:** tests cover upload validation and success, missing reports/sessions, review rendering and submission, and rules read/save/reset behavior, including error responses.
+
+### 1.5 Fix navigation from /report to Home page
+- [ ] **Add a "Back to Home" link on the report page.** The report page should link back to the home page so users can upload new statements without manually changing the URL.
+  - **Done when:** the report page has a working link to `/` that allows users to return to the upload page without losing their session or encountering errors.
 
 ## 2. Improve reliability and privacy
 
