@@ -28,7 +28,7 @@ This roadmap tracks work from fixing the current application through new spendin
 
 ### 1.4 Cover the HTTP workflow with tests
 
-- [ ] **Add FastAPI route tests.** Use temporary upload, report, session, and rules paths so tests do not touch a user's local data.
+- [x] **Add FastAPI route tests.** Use temporary upload, report, session, and rules paths so tests do not touch a user's local data.
   - **Done when:** tests cover upload validation and success, missing reports/sessions, review rendering and submission, and rules read/save/reset behavior, including error responses.
 
 ### 1.5 Fix navigation from /report to Home page

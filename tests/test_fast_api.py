@@ -1,0 +1,198 @@
+"""HTTP route coverage with all writable app data redirected to pytest temp dirs."""
+
+import pickle
+
+import pandas as pd
+import pytest
+from fastapi.testclient import TestClient
+
+import app.fast_api as fast_api
+import app.rules_store as rules_store
+from app.const import CATEGORY_RULES
+
+
+@pytest.fixture
+def client(tmp_path, monkeypatch):
+    """Keep every route's filesystem writes inside this test's temporary tree."""
+    upload_dir = tmp_path / "uploads"
+    report_dir = tmp_path / "reports"
+    session_dir = tmp_path / "sessions"
+    data_dir = tmp_path / "data"
+    for path in (upload_dir, report_dir, session_dir, data_dir):
+        path.mkdir()
+
+    monkeypatch.setattr(fast_api, "UPLOAD_DIR", upload_dir)
+    monkeypatch.setattr(fast_api, "REPORT_DIR", report_dir)
+    monkeypatch.setattr(fast_api, "SESSION_DIR", session_dir)
+    monkeypatch.setattr(rules_store, "DATA_DIR", data_dir)
+    monkeypatch.setattr(rules_store, "RULES_FILE", data_dir / "rules.json")
+
+    # Route tests exercise the response and workflow; keep generated artifacts tiny.
+    def write_report(analysis, output_path, session_id=None):
+        from pathlib import Path
+
+        Path(output_path).write_text(f"report:{session_id}", encoding="utf-8")
+
+    monkeypatch.setattr(fast_api, "generate_report", write_report)
+    with TestClient(fast_api.app) as test_client:
+        yield test_client
+
+
+VALID_CSV = """Date,PARTICULARS,Debit,Credit,Balance
+01/01/2024,ACH-CR SALARY,,50000,50000
+05/01/2024,UPI/Zomato Food,500,,49500
+"""
+
+
+def test_analyze_rejects_non_csv_upload(client, tmp_path):
+    response = client.post(
+        "/analyze", files={"files": ("statement.txt", b"not a csv", "text/plain")}
+    )
+
+    assert response.status_code == 400
+    assert "Only CSV files" in response.json()["error"]
+    assert list((tmp_path / "uploads").iterdir()) == []
+
+
+def test_analyze_rejects_bad_date_range(client, tmp_path):
+    response = client.post(
+        "/analyze",
+        files={"files": ("statement.csv", VALID_CSV, "text/csv")},
+        data={"date_from": "2024-02-01", "date_to": "2024-01-01"},
+    )
+
+    assert response.status_code == 400
+    assert "on or before" in response.json()["error"]
+    assert list((tmp_path / "uploads").iterdir()) == []
+
+
+def test_analyze_returns_error_and_cleans_upload_after_parse_failure(client, tmp_path):
+    response = client.post(
+        "/analyze",
+        files={"files": ("statement.csv", b"not,a,valid,bank,statement\n", "text/csv")},
+    )
+
+    assert response.status_code == 422
+    assert "Could not read statement.csv" in response.json()["error"]
+    assert list((tmp_path / "uploads").iterdir()) == []
+
+
+def test_analyze_success_saves_session_and_report_then_cleans_upload(client, tmp_path):
+    response = client.post(
+        "/analyze", files={"files": ("statement.CSV", VALID_CSV, "text/csv")}
+    )
+
+    assert response.status_code == 200
+    body = response.json()
+    assert body["report_url"].startswith("/report/")
+    assert body["other_count"] >= 0
+    session_id = body["report_url"].rsplit("/", 1)[-1]
+    assert (tmp_path / "sessions" / f"{session_id}.pkl").is_file()
+    assert (tmp_path / "reports" / f"report_{session_id}.html").read_text() == (
+        f"report:{session_id}"
+    )
+    assert list((tmp_path / "uploads").iterdir()) == []
+
+
+def test_report_and_review_return_404_for_missing_artifacts(client):
+    missing_id = "0123456789"
+
+    report = client.get(f"/report/{missing_id}")
+    review = client.get(f"/review/{missing_id}")
+    submission = client.post(
+        f"/review/{missing_id}", json={"overrides": {"0": "Dining"}}
+    )
+
+    assert report.status_code == 404
+    assert "Report not found" in report.text
+    assert review.status_code == 404
+    assert "Session not found" in review.text
+    assert submission.status_code == 404
+    assert submission.json() == {"error": "Session not found."}
+
+
+def test_review_renders_session_and_accepts_override(client, tmp_path):
+    session_id = "0123456789"
+    frame = pd.DataFrame(
+        {
+            "date": [pd.Timestamp("2024-01-05")],
+            "description": ["UPI unknown shop"],
+            "amount": [-250.0],
+            "type": ["debit"],
+            "category": ["Other"],
+        }
+    )
+    with (tmp_path / "sessions" / f"{session_id}.pkl").open("wb") as session_file:
+        pickle.dump({"df": frame, "warnings": []}, session_file)
+
+    page = client.get(f"/review/{session_id}")
+    assert page.status_code == 200
+    assert "UPI unknown shop" in page.text
+    assert 'data-idx="0"' in page.text
+    assert f"/report/{session_id}" in page.text
+
+    submitted = client.post(
+        f"/review/{session_id}", json={"overrides": {"0": "Dining"}}
+    )
+    assert submitted.status_code == 200
+    assert submitted.json() == {"report_url": f"/report/{session_id}"}
+    with (tmp_path / "sessions" / f"{session_id}.pkl").open("rb") as session_file:
+        saved = pickle.load(session_file)
+    assert saved["df"].at[0, "category"] == "Dining"
+    assert (tmp_path / "reports" / f"report_{session_id}.html").is_file()
+
+
+def test_review_rejects_bad_submission_without_changing_session(client, tmp_path):
+    session_id = "0123456789"
+    frame = pd.DataFrame(
+        {
+            "date": [pd.Timestamp("2024-01-05")],
+            "description": ["UPI unknown shop"],
+            "amount": [-250.0],
+            "type": ["debit"],
+            "category": ["Other"],
+        }
+    )
+    with (tmp_path / "sessions" / f"{session_id}.pkl").open("wb") as session_file:
+        pickle.dump({"df": frame, "warnings": []}, session_file)
+
+    response = client.post(
+        f"/review/{session_id}", json={"overrides": {"9": "Dining"}}
+    )
+
+    assert response.status_code == 400
+    assert response.json() == {"error": "Invalid transaction index."}
+    with (tmp_path / "sessions" / f"{session_id}.pkl").open("rb") as session_file:
+        saved = pickle.load(session_file)
+    assert saved["df"].at[0, "category"] == "Other"
+    assert list((tmp_path / "reports").iterdir()) == []
+
+
+def test_rules_api_reads_saves_and_resets_rules(client):
+    initial = client.get("/api/rules")
+    assert initial.status_code == 200
+    assert initial.json() == [
+        {"category": category, "patterns": patterns, "txn_type": txn_type}
+        for category, patterns, txn_type in CATEGORY_RULES
+    ]
+
+    custom_rules = [
+        {"category": "Dining", "patterns": ["Cafe"], "txn_type": "debit"}
+    ]
+    saved = client.post("/api/rules", json=custom_rules)
+    assert saved.status_code == 200
+    assert saved.json() == {"ok": True, "count": 1}
+    assert client.get("/api/rules").json() == custom_rules
+
+    reset = client.post("/api/rules/reset")
+    assert reset.status_code == 200
+    assert reset.json() == {"ok": True}
+    assert client.get("/api/rules").json() == initial.json()
+
+
+@pytest.mark.parametrize("body", [{"bad": "shape"}, {"category": "Dining"}, "not a list"])
+def test_rules_api_reports_invalid_save_payload(client, body):
+    response = client.post("/api/rules", json=body)
+
+    assert response.status_code == 400
+    assert "error" in response.json()
