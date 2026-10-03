@@ -13,6 +13,7 @@ Routes:
   POST /api/rules/reset       → reset rules to defaults
 """
 
+import json
 import pickle
 import re
 import uuid
@@ -54,6 +55,8 @@ app = FastAPI(title="Financial Analyzer")
 
 
 def _load_session(session_id: str) -> dict | None:
+    if not re.fullmatch(r"[0-9a-f]{10}|[0-9a-f]{32}", session_id):
+        return None
     pkl = SESSION_DIR / f"{session_id}.pkl"
     if not pkl.exists():
         return None
@@ -293,22 +296,27 @@ def review_page(session_id: str):
         )
 
     categories = get_category_names()
-    cat_options = "".join(f'<option value="{c}">{c}</option>' for c in categories)
+    cat_options = "".join(
+        f'<option value="{escape(c, quote=True)}">{escape(c)}</option>'
+        for c in categories
+    )
 
     rows_html = ""
     for idx, row in other_df.iterrows():
         amt_class = "pos" if row["amount"] > 0 else "neg"
         amt_sign = "+" if row["amount"] > 0 else ""
-        date_str = str(row["date"])[:10]
-        desc = str(row["description"]).replace('"', "&quot;")
+        date_str = escape(str(row["date"])[:10])
+        desc = escape(str(row["description"]), quote=True)
+        current_category = escape(str(row["category"]))
+        row_index = escape(str(idx), quote=True)
         rows_html += f"""
         <tr>
           <td class="mono muted">{date_str}</td>
           <td class="desc" title="{desc}">{desc}</td>
-          <td class="{amt_class} mono">{amt_sign}₹{abs(row['amount']):,.0f}</td>
-          <td><span class="cur-cat">{row['category']}</span></td>
-          <td><select class="cat-select" data-idx="{idx}">
-            <option value="">— keep as {row['category']} —</option>
+          <td class="{escape(amt_class, quote=True)} mono">{escape(amt_sign)}₹{abs(row['amount']):,.0f}</td>
+          <td><span class="cur-cat">{current_category}</span></td>
+          <td><select class="cat-select" data-idx="{row_index}">
+            <option value="">— keep as {current_category} —</option>
             {cat_options}
           </select></td>
         </tr>"""
@@ -316,7 +324,7 @@ def review_page(session_id: str):
     return HTMLResponse(
         (TEMPLATES_DIR / "review.html")
         .read_text(encoding="utf-8")
-        .replace("__SESSION_ID__", session_id)
+        .replace("__SESSION_ID__", json.dumps(session_id))
         .replace("__OTHER_COUNT__", str(len(other_df)))
         .replace("__ROWS__", rows_html)
         .replace("__REPORT_URL__", f"/report/{session_id}")
@@ -329,15 +337,31 @@ async def apply_review(session_id: str, request: Request):
     if data is None:
         return JSONResponse(status_code=404, content={"error": "Session not found."})
 
-    body = await request.json()
-    overrides = {int(k): v for k, v in body.get("overrides", {}).items() if v}
+    try:
+        body = await request.json()
+    except (ValueError, UnicodeDecodeError):
+        return JSONResponse(status_code=400, content={"error": "Invalid review submission."})
+    if not isinstance(body, dict) or not isinstance(body.get("overrides"), dict):
+        return JSONResponse(status_code=400, content={"error": "Invalid review submission."})
+
+    submitted = body["overrides"]
+    overrides: dict[int, str] = {}
+    valid_categories = set(get_category_names())
+    for raw_idx, category in submitted.items():
+        if not isinstance(raw_idx, str) or not re.fullmatch(r"-?\d+", raw_idx):
+            return JSONResponse(status_code=400, content={"error": "Invalid transaction index."})
+        idx = int(raw_idx)
+        if not isinstance(category, str) or category not in valid_categories:
+            return JSONResponse(status_code=400, content={"error": "Invalid category."})
+        overrides[idx] = category
     if not overrides:
         return JSONResponse(status_code=400, content={"error": "No changes submitted."})
 
     df = data["df"].copy()
+    if any(idx not in df.index for idx in overrides):
+        return JSONResponse(status_code=400, content={"error": "Invalid transaction index."})
     for idx, cat in overrides.items():
-        if idx in df.index:
-            df.at[idx, "category"] = cat
+        df.at[idx, "category"] = cat
 
     _save_session(session_id, {**data, "df": df})
     analysis = analyze(df, data["warnings"])

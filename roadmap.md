@@ -23,7 +23,7 @@ This roadmap tracks work from fixing the current application through new spendin
 
 ### 1.3 Protect transaction data rendered into HTML
 
-- [ ] **Escape review-page values and restrict manual category changes.** Encode descriptions, current category names, and generated option values for their HTML context. Accept review overrides only for existing transaction indexes and categories from the active rules.
+- [x] **Escape review-page values and restrict manual category changes.** Encode descriptions, current category names, and generated option values for their HTML context. Accept review overrides only for existing transaction indexes and categories from the active rules.
   - **Done when:** special HTML characters display as text in the review page, crafted values cannot create markup or script, invalid categories/indexes are rejected or ignored consistently, and valid changes still regenerate the report.
 
 ### 1.4 Cover the HTTP workflow with tests
