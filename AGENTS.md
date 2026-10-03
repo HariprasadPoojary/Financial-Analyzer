@@ -12,7 +12,7 @@ The application is aimed at personal bank statements, including Indian bank form
 - After each code change, run the full test suite with `.\.venv\Scripts\pytest.exe`.
 - Before committing, run `.\.venv\Scripts\ruff.exe check .` and `.\.venv\Scripts\mypy.exe` from the existing `.venv`.
 - Install the Git hooks with `uv run pre-commit install`; the configured pre-commit hooks run both checks.
-- Start the web application from the repository root with `uvicorn app.fast_api:app --reload --host 0.0.0.0 --port 8000`.
+- Start the web application from the repository root with `uvicorn app.fast_api:app --reload --host 127.0.0.1 --port 8000`.
 - `app/` is a Python package. Imports use `from app.<module> import ...`.
 - `main.py` and `test_pipeline.py` are CLI/example scripts, not the FastAPI entry point. The web entry point is `app/fast_api.py`.
 - `app/templates/index.html`, `settings.html`, and `review.html` are plain HTML pages read directly from disk. Their JavaScript calls the JSON/API routes for dynamic behavior. `report.html` is the report template rendered by Jinja2 in `app/report_builder.py`.

@@ -5,6 +5,11 @@ DEBIT_ALIASES = ["Debit", "CR"]
 CREDIT_ALIASES = ["Credit", "DR"]
 BALANCE_ALIASES = ["Balance", "BAL"]
 
+# Upload limits for the web interface, measured in bytes unless noted otherwise.
+MAX_UPLOAD_FILES = 10
+MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024
+MAX_REQUEST_SIZE_BYTES = 50 * 1024 * 1024
+
 # ── Category rules: (category, [patterns], transaction_type) ──────────────────
 #
 # Pattern syntax:

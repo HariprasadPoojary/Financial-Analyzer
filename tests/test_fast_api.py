@@ -8,6 +8,7 @@ from fastapi.testclient import TestClient
 
 import app.fast_api as fast_api
 import app.rules_store as rules_store
+from app import const
 from app.const import CATEGORY_RULES
 
 
@@ -92,6 +93,119 @@ def test_analyze_success_saves_session_and_report_then_cleans_upload(client, tmp
         f"report:{session_id}"
     )
     assert list((tmp_path / "uploads").iterdir()) == []
+
+
+def test_analyze_accepts_file_just_under_configured_size_limit(
+    client, monkeypatch
+):
+    content = VALID_CSV.encode()
+    monkeypatch.setattr(const, "MAX_FILE_SIZE_BYTES", len(content) + 1)
+
+    response = client.post(
+        "/analyze", files={"files": ("statement.csv", content, "text/csv")}
+    )
+
+    assert response.status_code == 200
+
+
+def test_analyze_rejects_file_over_configured_size_limit(client, monkeypatch):
+    content = VALID_CSV.encode() + b"\n\n"
+    monkeypatch.setattr(
+        const, "MAX_FILE_SIZE_BYTES", len(VALID_CSV.encode()) + 1
+    )
+
+    response = client.post(
+        "/analyze", files={"files": ("statement.csv", content, "text/csv")}
+    )
+
+    assert response.status_code == 413
+    assert "Each CSV must be at most" in response.json()["error"]
+
+
+def test_analyze_accepts_file_count_at_configured_limit(client, monkeypatch):
+    monkeypatch.setattr(const, "MAX_UPLOAD_FILES", 2)
+
+    response = client.post(
+        "/analyze",
+        files=[
+            ("files", ("one.csv", VALID_CSV, "text/csv")),
+            ("files", ("two.csv", VALID_CSV, "text/csv")),
+        ],
+    )
+
+    assert response.status_code == 200
+
+
+def test_analyze_rejects_file_count_over_configured_limit(client, monkeypatch):
+    monkeypatch.setattr(const, "MAX_UPLOAD_FILES", 2)
+
+    response = client.post(
+        "/analyze",
+        files=[
+            ("files", ("one.csv", VALID_CSV, "text/csv")),
+            ("files", ("two.csv", VALID_CSV, "text/csv")),
+            ("files", ("three.csv", VALID_CSV, "text/csv")),
+        ],
+    )
+
+    assert response.status_code == 413
+    assert "maximum is 2 files" in response.json()["error"]
+
+
+def test_analyze_accepts_request_just_under_total_size_limit(
+    client, monkeypatch
+):
+    boundary = "upload-boundary"
+    content = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="files"; filename="statement.csv"\r\n'
+        "Content-Type: text/csv\r\n\r\n"
+    ).encode() + VALID_CSV.encode() + f"\r\n--{boundary}--\r\n".encode()
+    monkeypatch.setattr(
+        const, "MAX_REQUEST_SIZE_BYTES", len(content) + 1
+    )
+
+    response = client.post(
+        "/analyze",
+        content=content,
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+
+    assert response.status_code == 200
+
+
+def test_analyze_rejects_request_over_total_size_limit(client, monkeypatch):
+    boundary = "upload-boundary"
+    content = (
+        f"--{boundary}\r\n"
+        'Content-Disposition: form-data; name="files"; filename="statement.csv"\r\n'
+        "Content-Type: text/csv\r\n\r\n"
+    ).encode() + VALID_CSV.encode() + f"\r\n--{boundary}--\r\n".encode()
+    monkeypatch.setattr(
+        const, "MAX_REQUEST_SIZE_BYTES", len(content) + 1
+    )
+
+    response = client.post(
+        "/analyze",
+        content=content + b"  ",
+        headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+    )
+
+    assert response.status_code == 413
+    assert "maximum total request size" in response.json()["error"]
+
+
+def test_home_page_displays_configured_upload_limits(client, monkeypatch):
+    monkeypatch.setattr(const, "MAX_UPLOAD_FILES", 3)
+    monkeypatch.setattr(const, "MAX_FILE_SIZE_BYTES", 2 * 1024 * 1024)
+    monkeypatch.setattr(const, "MAX_REQUEST_SIZE_BYTES", 7 * 1024 * 1024)
+
+    response = client.get("/")
+
+    assert response.status_code == 200
+    assert "up to 3 CSV files" in response.text
+    assert "2 MiB per file" in response.text
+    assert "7 MiB total per upload" in response.text
 
 
 def test_report_and_review_return_404_for_missing_artifacts(client):

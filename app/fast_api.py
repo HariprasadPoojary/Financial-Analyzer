@@ -22,8 +22,12 @@ from html import escape
 from pathlib import Path
 
 import pandas as pd
-from fastapi import FastAPI, File, Form, Request, UploadFile
+from fastapi import FastAPI, Request
 from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
+from starlette.datastructures import UploadFile
+from starlette.exceptions import HTTPException
+from starlette.formparsers import MultiPartException
+from starlette.types import ASGIApp, Message, Receive, Scope, Send
 
 from app.analyzer import analyze
 from app.categorizer import categorize_dataframe
@@ -35,6 +39,7 @@ from app.rules_store import (
     reset_to_defaults,
     save_rules,
 )
+from app import const
 
 # ── Directories ───────────────────────────────────────────────────────────────
 
@@ -49,6 +54,67 @@ for d in (UPLOAD_DIR, REPORT_DIR, SESSION_DIR, DATA_DIR):
     d.mkdir(exist_ok=True)
 
 app = FastAPI(title="Financial Analyzer")
+
+
+class RequestSizeLimitMiddleware:
+    """Reject oversized analyze requests before multipart parsing or disk writes."""
+
+    def __init__(self, app: ASGIApp) -> None:
+        self.app = app
+
+    async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
+        if scope["type"] != "http" or scope["path"] != "/analyze" or scope["method"] != "POST":
+            await self.app(scope, receive, send)
+            return
+
+        max_bytes = const.MAX_REQUEST_SIZE_BYTES
+        headers = {key.lower(): value for key, value in scope.get("headers", [])}
+        content_length = headers.get(b"content-length")
+        if content_length:
+            try:
+                if int(content_length) > max_bytes:
+                    await self._reject(scope, receive, send, max_bytes)
+                    return
+            except ValueError:
+                pass
+
+        messages: list[Message] = []
+        total_bytes = 0
+        while True:
+            message = await receive()
+            messages.append(message)
+            if message["type"] == "http.disconnect":
+                break
+            if message["type"] == "http.request":
+                total_bytes += len(message.get("body", b""))
+                if total_bytes > max_bytes:
+                    await self._reject(scope, receive, send, max_bytes)
+                    return
+                if not message.get("more_body", False):
+                    break
+
+        async def replay_body() -> Message:
+            if messages:
+                return messages.pop(0)
+            return await receive()
+
+        await self.app(scope, replay_body, send)
+
+    @staticmethod
+    async def _reject(scope: Scope, receive: Receive, send: Send, max_bytes: int) -> None:
+        response = JSONResponse(
+            status_code=413,
+            content={
+                "error": (
+                    "Upload request is too large. The maximum total request size is "
+                    f"{max_bytes} bytes."
+                )
+            },
+        )
+        await response(scope, receive, send)
+
+
+app.add_middleware(RequestSizeLimitMiddleware)
 
 
 # ── Session helpers ───────────────────────────────────────────────────────────
@@ -132,13 +198,59 @@ def _recent_sessions_html(limit: int = 10) -> str:
 
 
 @app.post("/analyze")
-async def analyze_statements(
-    files: list[UploadFile] = File(...),
-    date_from: str = Form(default=None),
-    date_to: str = Form(default=None),
-):
+async def analyze_statements(request: Request):
+    try:
+        form = await request.form(max_files=const.MAX_UPLOAD_FILES)
+    except MultiPartException:
+        return JSONResponse(
+            status_code=413,
+            content={
+                "error": (
+                    "Too many files uploaded. The maximum is "
+                    f"{const.MAX_UPLOAD_FILES} files per request."
+                )
+            },
+        )
+    except HTTPException as exc:
+        if exc.status_code == 400 and "too many files" in str(exc.detail).lower():
+            return JSONResponse(
+                status_code=413,
+                content={
+                    "error": (
+                        "Too many files uploaded. The maximum is "
+                    f"{const.MAX_UPLOAD_FILES} files per request."
+                    )
+                },
+            )
+        return JSONResponse(status_code=exc.status_code, content={"error": str(exc.detail)})
+
+    files = [value for value in form.getlist("files") if isinstance(value, UploadFile)]
+    date_from_value = form.get("date_from")
+    date_to_value = form.get("date_to")
+    date_from = date_from_value if isinstance(date_from_value, str) else None
+    date_to = date_to_value if isinstance(date_to_value, str) else None
+
     if not files or all(not f.filename for f in files):
+        await form.close()
         return JSONResponse(status_code=400, content={"error": "No files uploaded."})
+
+    oversized = [
+        f.filename or "(unnamed file)"
+        for f in files
+        if (f.size or 0) > const.MAX_FILE_SIZE_BYTES
+    ]
+    if oversized:
+        await form.close()
+        return JSONResponse(
+            status_code=413,
+            content={
+                "error": (
+                    "File size limit exceeded. Each CSV must be at most "
+                    f"{const.MAX_FILE_SIZE_BYTES} bytes. Oversized file(s): "
+                    + ", ".join(oversized)
+                )
+            },
+        )
 
     invalid_files = [
         f.filename or "(unnamed file)"
@@ -146,6 +258,7 @@ async def analyze_statements(
         if not f.filename or Path(f.filename).suffix.lower() != ".csv"
     ]
     if invalid_files:
+        await form.close()
         return JSONResponse(
             status_code=400,
             content={
@@ -169,9 +282,11 @@ async def analyze_statements(
         start_date = parse_date_filter(date_from, "Start date")
         end_date = parse_date_filter(date_to, "End date")
     except ValueError as e:
+        await form.close()
         return JSONResponse(status_code=400, content={"error": str(e)})
 
     if start_date and end_date and start_date > end_date:
+        await form.close()
         return JSONResponse(
             status_code=400,
             content={"error": "Start date must be on or before end date."},
@@ -235,6 +350,7 @@ async def analyze_statements(
     finally:
         for path in saved_paths:
             path.unlink(missing_ok=True)
+        await form.close()
 
 
 
@@ -405,6 +521,11 @@ def reset_rules_api():
 @app.get("/", response_class=HTMLResponse)
 def index():
     """Serve the main HTML page with the file upload form."""
-    return (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8").replace(
-        "__RECENT_SESSIONS__", _recent_sessions_html()
+    template = (TEMPLATES_DIR / "index.html").read_text(encoding="utf-8")
+    mib = 1024 * 1024
+    return (
+        template.replace("__RECENT_SESSIONS__", _recent_sessions_html())
+        .replace("__MAX_UPLOAD_FILES__", str(const.MAX_UPLOAD_FILES))
+        .replace("__MAX_FILE_SIZE__", f"{const.MAX_FILE_SIZE_BYTES / mib:g} MiB")
+        .replace("__MAX_REQUEST_SIZE__", f"{const.MAX_REQUEST_SIZE_BYTES / mib:g} MiB")
     )

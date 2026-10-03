@@ -43,12 +43,12 @@ This roadmap tracks work from fixing the current application through new spendin
 
 ### 2.1 Make local-only use the safe default
 
-- [ ] **Default documented startup to localhost.** Update setup instructions to bind to `127.0.0.1` by default and explain that binding to a LAN/public interface can expose transaction reports and rule editing to other reachable users.
+- [x] **Default documented startup to localhost.** Update setup instructions to bind to `127.0.0.1` by default and explain that binding to a LAN/public interface can expose transaction reports and rule editing to other reachable users.
   - **Done when:** the primary run command is local-only, network exposure is clearly documented, and the app makes no claim that network access is authenticated.
 
 ### 2.2 Bound upload resource use
 
-- [ ] **Add configurable upload limits.** Limit the number of CSV files, each file's byte size, and total request size; return useful errors before large files exhaust memory or disk.
+- [x] **Add configurable upload limits.** Limit the number of CSV files, each file's byte size, and total request size; return useful errors before large files exhaust memory or disk.
   - **Done when:** boundary tests cover just-under and over-limit requests, limits can be changed in one documented configuration location, and normal uploads are unaffected.
 
 ### 2.3 Clean up expired local artifacts

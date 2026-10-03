@@ -76,8 +76,10 @@ uv sync
 1. **Start the FastAPI server**:
 
     ```bash
-    uvicorn app.fast_api:app --reload --host 0.0.0.0 --port 8000
+    uvicorn app.fast_api:app --reload --host 127.0.0.1 --port 8000
     ```
+
+   This binds the app to this computer only. Binding to `0.0.0.0` or another LAN/public interface can let other reachable users view generated transaction reports and change categorization rules. The app does not authenticate network users, so do not expose it to a network.
 
 2. **Open in browser**:
    Navigate to `http://localhost:8000`
@@ -91,6 +93,8 @@ uv sync
     - View the generated HTML report with categorized transactions
     - Click "Review" to edit categorizations for problematic transactions
     - Access the "Settings" page to manage categorization rules
+
+Upload limits are configured together in `app/const.py`: up to 10 CSV files per request, 10 MiB per file, and 50 MiB for the complete request including multipart form data. Change those values in that file to adjust the limits. The upload page displays the current limits. Requests above the total limit and files above the per-file limit are rejected with an error before they are saved for analysis.
 
 ### Command Line Interface
 
@@ -215,7 +219,7 @@ uploads/
 
 ```bash
 # Use a different port
-uvicorn app.fast_api:app --reload --port 8000
+uvicorn app.fast_api:app --reload --host 127.0.0.1 --port 8000
 ```
 
 ### CSV Parsing Errors
@@ -226,7 +230,7 @@ uvicorn app.fast_api:app --reload --port 8000
 
 ### Memory Issues with Large Files
 
-For very large CSV files, consider splitting them before uploading to prevent memory issues.
+If a CSV exceeds the configured upload limits, split it into smaller files before uploading or adjust the limits in `app/const.py`.
 
 ## 📄 License
 

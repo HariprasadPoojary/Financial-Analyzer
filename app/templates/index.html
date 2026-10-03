@@ -196,6 +196,12 @@
 			.drop-sub span {
 				color: var(--accent);
 			}
+			.upload-limit {
+				margin: 10px 0 0;
+				color: var(--muted);
+				font-size: 0.72rem;
+				text-align: center;
+			}
 			input[type="file"] {
 				display: none;
 			}
@@ -476,6 +482,10 @@
 				</div>
 				<input type="file" id="file-input" accept=".csv" multiple />
 			</div>
+			<p class="upload-limit">
+				Limits: up to __MAX_UPLOAD_FILES__ CSV files, __MAX_FILE_SIZE__ per file,
+				and __MAX_REQUEST_SIZE__ total per upload (including form data).
+			</p>
 			<div class="date-range">
 				<div class="date-field">
 					<label>From date (optional)</label
